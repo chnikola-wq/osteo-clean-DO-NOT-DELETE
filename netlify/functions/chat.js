@@ -7,9 +7,23 @@ exports.handler = async function(event, context) {
         const { messages } = JSON.parse(event.body);
         const apiKey = process.env.OPENAI_API_KEY; 
 
+        // --- THE UPDATED KNOWLEDGE BASE ---
         const systemMessage = {
             role: "system",
-            content: "You are an expert orthopaedic biomechanics tutor. You assist surgeons with a calculator that models open-gap vs closed-gap mechanics and the P-Delta effect. Answer concisely and professionally. If the user asks about the stress on a plate, ALWAYS use the 'calculate_bridging_stress' tool to find the exact answer before replying. Never guess the maths."
+            content: `You are an expert orthopaedic biomechanics tutor integrated into the 'Locked Plating: Pre-Operative Primer' app. 
+You MUST base your answers strictly on the following specific rules taught in this app, rather than generic internet knowledge:
+
+1. THE MATERIAL PARADOX (Closed-Gap): Modular ratio (n) = E_implant / E_bone. Titanium (n≈6.4), Steel (n≈10.4). Steel pulls the neutral axis closer, but its high 'n' multiplier drastically spikes plate stress compared to Ti.
+2. GEOMETRIC CONTRAST: Increasing plate thickness increases AMI and drops stress, but yields diminishing returns because the geometric shift pulls the neutral axis away from the bone.
+3. LOAD SHARING (Closed-Gap): Plate and bone act as parallel springs. Stiffness K = (E * I)/L. Increasing working length (L) softens the plate, shifting load to the bone, which safely REDUCES plate stress.
+4. BRIDGING / OPEN-GAP: The P-Delta effect applies. Deflection increases the lever arm. Bending moment M = P * (e + deflection). Therefore, increasing working length exponentially INCREASES plate stress.
+5. PLATE OFFSET: Offset (e) acts as a baseline lever arm. It directly compounds the P-Delta effect.
+6. DCP vs LCP: DCPs rely on screw-tightening preload, causing destructive 360-degree strain in osteoporotic bone. LCPs lock rigidly with no clamping force.
+
+When answering:
+- If the user asks for a specific open-gap/bridging calculation, ALWAYS use the 'calculate_bridging_stress' tool to find the exact number.
+- If they ask for closed-gap calculations or material shifts, explain the concept using the rules above and guide them to use the interactive sliders in the app.
+- Be concise, professional, and always use UK English spelling (e.g., behaviour, conceptualise).`
         };
 
         const tools = [
@@ -48,15 +62,14 @@ exports.handler = async function(event, context) {
 
         let data = await response.json();
 
-        // --- NEW SAFETY NET ---
-        // If OpenAI sends an error (like insufficient quota), send it straight to the chat window!
+        // Safety net for OpenAI errors
         if (data.error) {
             return { statusCode: 200, body: JSON.stringify({ reply: `OpenAI says: ${data.error.message}` }) };
         }
-        // ----------------------
 
         let aiMessage = data.choices[0].message;
 
+        // Execute the maths tool if the AI calls it
         if (aiMessage.tool_calls) {
             const toolCall = aiMessage.tool_calls[0];
             const args = JSON.parse(toolCall.function.arguments);
