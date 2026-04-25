@@ -1,20 +1,17 @@
 exports.handler = async function(event, context) {
-    // 1. Only allow POST requests
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: "Method Not Allowed" };
     }
 
     try {
         const { messages } = JSON.parse(event.body);
-        const apiKey = process.env.OPENAI_API_KEY; // This keeps your key secret
+        const apiKey = process.env.OPENAI_API_KEY; 
 
-        // 2. The System Prompt (Telling the AI who it is)
         const systemMessage = {
             role: "system",
             content: "You are an expert orthopaedic biomechanics tutor. You assist surgeons with a calculator that models open-gap vs closed-gap mechanics and the P-Delta effect. Answer concisely and professionally. If the user asks about the stress on a plate, ALWAYS use the 'calculate_bridging_stress' tool to find the exact answer before replying. Never guess the maths."
         };
 
-        // 3. Define the Tool (Your app's maths)
         const tools = [
             {
                 type: "function",
@@ -35,7 +32,6 @@ exports.handler = async function(event, context) {
             }
         ];
 
-        // 4. Send the first request to OpenAI
         let response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -43,7 +39,7 @@ exports.handler = async function(event, context) {
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini", // Fast, cheap, capable model
+                model: "gpt-4o-mini",
                 messages: [systemMessage, ...messages],
                 tools: tools,
                 tool_choice: "auto"
@@ -51,20 +47,26 @@ exports.handler = async function(event, context) {
         });
 
         let data = await response.json();
+
+        // --- NEW SAFETY NET ---
+        // If OpenAI sends an error (like insufficient quota), send it straight to the chat window!
+        if (data.error) {
+            return { statusCode: 200, body: JSON.stringify({ reply: `OpenAI says: ${data.error.message}` }) };
+        }
+        // ----------------------
+
         let aiMessage = data.choices[0].message;
 
-        // 5. Tool Execution Logic (If the AI decides it needs to use the calculator)
         if (aiMessage.tool_calls) {
             const toolCall = aiMessage.tool_calls[0];
             const args = JSON.parse(toolCall.function.arguments);
             
-            // Execute your actual physics formula here
             const L = args.workingLength;
             const I_p = args.plateAMI || 25;
             const P = args.axialLoad || 1000;
             const e = args.offset || 5;
-            const E = 114500; // Titanium
-            const y = 1.5; // Distance to neutral axis
+            const E = 114500; 
+            const y = 1.5; 
             
             const EI = E * I_p;
             const k = Math.sqrt(P / EI);
@@ -73,7 +75,6 @@ exports.handler = async function(event, context) {
             const moment = P * (e + deflection);
             const calculatedStress = (moment * y) / I_p;
 
-            // Send the exact calculated number back to the AI
             const toolMessage = {
                 role: "tool",
                 tool_call_id: toolCall.id,
@@ -81,7 +82,6 @@ exports.handler = async function(event, context) {
                 content: JSON.stringify({ calculated_stress_MPa: calculatedStress })
             };
 
-            // Second request to OpenAI to get the final conversational answer
             const secondResponse = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -95,10 +95,14 @@ exports.handler = async function(event, context) {
             });
 
             data = await secondResponse.json();
+            
+            if (data.error) {
+                return { statusCode: 200, body: JSON.stringify({ reply: `OpenAI says: ${data.error.message}` }) };
+            }
+
             aiMessage = data.choices[0].message;
         }
 
-        // 6. Return the final answer to your frontend
         return {
             statusCode: 200,
             body: JSON.stringify({ reply: aiMessage.content })
