@@ -5,7 +5,7 @@ exports.handler = async function(event, context) {
 
     try {
         const { messages } = JSON.parse(event.body);
-        const apiKey = process.env.GEMINI_API_KEY; 
+        const apiKey = "AIzaSyCa_wMe_zig06fujE8jXBD4kfDM5nZXeRU"; 
 
         // Format messages for Gemini
         const contents = messages.map(m => ({
