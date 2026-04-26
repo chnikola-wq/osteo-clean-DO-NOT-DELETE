@@ -1452,15 +1452,28 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messages: newMessages.filter(m => m.role !== 'system') })
                     });
-                    
-                    const data = await response.json();
-                    if (data.reply) {
+
+                    let data = null;
+                    let rawText = '';
+                    try {
+                        rawText = await response.text();
+                        data = rawText ? JSON.parse(rawText) : null;
+                    } catch (parseErr) {
+                        // body wasn't JSON
+                    }
+
+                    if (!response.ok) {
+                        const errMsg = (data && (data.error || data.message)) || rawText || ('HTTP ' + response.status);
+                        setMessages([...newMessages, { role: "assistant", content: "Server error: " + errMsg }]);
+                    } else if (data && data.reply) {
                         setMessages([...newMessages, { role: "assistant", content: data.reply }]);
+                    } else if (data && data.error) {
+                        setMessages([...newMessages, { role: "assistant", content: "Error: " + data.error }]);
                     } else {
                         setMessages([...newMessages, { role: "assistant", content: "Sorry, I encountered an error checking the maths." }]);
                     }
                 } catch (error) {
-                    setMessages([...newMessages, { role: "assistant", content: "Network error. Please try again." }]);
+                    setMessages([...newMessages, { role: "assistant", content: "Network error: " + (error.message || 'request failed') }]);
                 }
                 setIsLoading(false);
             };
@@ -2602,17 +2615,4 @@
                             {/* REQUIRED FOOTER: Prevents the anti-tamper "Integrity Failed" error */}
                             <div id="watermark-cn" className="mt-8 text-center text-xs text-slate-500 dark:text-slate-400 w-full pt-6 border-t border-slate-200 dark:border-slate-800 opacity-100 visible">
                                 <p className="font-bold">Created by Christos Nikolaou</p>
-                                <p className="italic max-w-2xl mx-auto mt-1">For educational and research purposes only. Does not substitute clinical judgement.</p>
-                            </div>
-                        </div>
-                    </footer>
-                </div>
-            );
-        }
-
-        // Mount the React Application
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+       
