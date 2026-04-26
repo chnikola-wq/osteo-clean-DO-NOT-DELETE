@@ -67,9 +67,9 @@ Be concise and professional. Surgeons are time-poor. The "From the app" section 
 
 TEXT FORMATTING — your replies are rendered as Markdown in the chat UI, so use Markdown formatting throughout:
 - Use **bold** for key terms, section headings, and important values.
-- Use bullet lists (`- item`) for enumerations, steps, or comparisons.
-- Use numbered lists (`1. item`) for sequential steps or ranked findings.
-- Use `##` or `###` headings only when a reply is long enough to benefit from clear sections.
+- Use bullet lists (\`- item\`) for enumerations, steps, or comparisons.
+- Use numbered lists (\`1. item\`) for sequential steps or ranked findings.
+- Use \`##\` or \`###\` headings only when a reply is long enough to benefit from clear sections.
 - Keep paragraphs short — one or two sentences each.
 - Never output raw HTML tags.
 
