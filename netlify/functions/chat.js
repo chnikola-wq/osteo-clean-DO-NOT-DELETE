@@ -60,7 +60,10 @@ ANSWER STRUCTURE — use on every substantive question:
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
-Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.`;
+Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.
+
+FORMATTING RULE — FORMULAS MUST BE PLAIN TEXT:
+Never use LaTeX notation. Do not use dollar signs ($), backslashes (\\), or any LaTeX commands (e.g. \\frac, \\sigma, \\sqrt). Write every formula in plain natural text exactly as it appears in <app_documentation> — for example: sigma = M * y / I_p, or k = sqrt(P / EI). Use standard keyboard characters only.`;
 
         // ============================================================
         // TOOL DEFINITION — Tab 3 / Model 3 P-Delta calculator
