@@ -1434,10 +1434,15 @@
 
                 try {
                     // Send message to our secure Netlify Function
+                    const apiMessages = newMessages.filter(m => m.role !== 'system');
+                    // Anthropic requires the first message to be from 'user'.
+                    // Drop any leading assistant messages (e.g. the display-only greeting).
+                    const firstUserIdx = apiMessages.findIndex(m => m.role === 'user');
+                    const trimmedMessages = firstUserIdx > 0 ? apiMessages.slice(firstUserIdx) : apiMessages;
                     const response = await fetch('/.netlify/functions/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages: newMessages.filter(m => m.role !== 'system') })
+                        body: JSON.stringify({ messages: trimmedMessages })
                     });
                     
                     const data = await response.json();
