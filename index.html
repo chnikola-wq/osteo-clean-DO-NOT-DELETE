@@ -1323,120 +1323,15 @@
             );
         };
 
-        // --- AI TUTOR: rich message renderer (paragraphs + LaTeX + bold) ---
-        const MessageContent = ({ text, isUser }) => {
-            // Split on blank lines into paragraphs; within each paragraph
-            // handle $$...$$ block math, $...$ inline math, and **bold**.
-            const renderInline = (segment, keyPrefix) => {
-                const parts = [];
-                const regex = /(\$[^$\n]+\$)|(\*\*[^*]+\*\*)/g;
-                let lastIdx = 0;
-                let m;
-                let i = 0;
-                while ((m = regex.exec(segment)) !== null) {
-                    if (m.index > lastIdx) {
-                        parts.push(<span key={`${keyPrefix}-t-${i++}`}>{segment.slice(lastIdx, m.index)}</span>);
-                    }
-                    if (m[1]) {
-                        const math = m[1].slice(1, -1);
-                        parts.push(<Latex key={`${keyPrefix}-m-${i++}`} math={math} />);
-                    } else if (m[2]) {
-                        parts.push(<strong key={`${keyPrefix}-b-${i++}`}>{m[2].slice(2, -2)}</strong>);
-                    }
-                    lastIdx = regex.lastIndex;
-                }
-                if (lastIdx < segment.length) {
-                    parts.push(<span key={`${keyPrefix}-t-${i++}`}>{segment.slice(lastIdx)}</span>);
-                }
-                return parts;
-            };
-
-            // Pull out $$...$$ blocks first as their own elements.
-            const blocks = [];
-            const blockRegex = /\$\$([\s\S]+?)\$\$/g;
-            let lastIdx = 0;
-            let m;
-            while ((m = blockRegex.exec(text)) !== null) {
-                if (m.index > lastIdx) blocks.push({ type: 'text', value: text.slice(lastIdx, m.index) });
-                blocks.push({ type: 'block', value: m[1].trim() });
-                lastIdx = blockRegex.lastIndex;
-            }
-            if (lastIdx < text.length) blocks.push({ type: 'text', value: text.slice(lastIdx) });
-
-            const elements = [];
-            blocks.forEach((b, bi) => {
-                if (b.type === 'block') {
-                    elements.push(
-                        <div key={`b-${bi}`} className={`my-2 px-2 py-1.5 rounded-md overflow-x-auto text-center ${isUser ? 'bg-blue-700/40' : 'bg-slate-300/50 dark:bg-slate-800/60'}`}>
-                            <Latex math={b.value} />
-                        </div>
-                    );
-                } else {
-                    const paragraphs = b.value.split(/\n{2,}/);
-                    paragraphs.forEach((p, pi) => {
-                        const trimmed = p.trim();
-                        if (!trimmed) return;
-                        const lines = trimmed.split('\n');
-                        elements.push(
-                            <p key={`p-${bi}-${pi}`} className="leading-relaxed [&:not(:last-child)]:mb-2">
-                                {lines.map((line, li) => (
-                                    <React.Fragment key={`l-${bi}-${pi}-${li}`}>
-                                        {li > 0 && <br />}
-                                        {renderInline(line, `${bi}-${pi}-${li}`)}
-                                    </React.Fragment>
-                                ))}
-                            </p>
-                        );
-                    });
-                }
-            });
-            return <>{elements}</>;
-        };
-
         const AiTutorWidget = () => {
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([{ role: "assistant", content: "Hello! I am your biomechanics assistant. Ask me how working length or offset affects construct stability." }]);
             const [input, setInput] = useState("");
             const [isLoading, setIsLoading] = useState(false);
-            const [isExpanded, setIsExpanded] = useState(false);
-            const [size, setSize] = useState({ w: null, h: null });
             const messagesEndRef = useRef(null);
-            const resizingRef = useRef(null);
 
             const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
             useEffect(() => { scrollToBottom(); }, [messages]);
-
-            // Resize via top-left corner drag.
-            const onResizeStart = (e) => {
-                e.preventDefault();
-                const startX = e.clientX;
-                const startY = e.clientY;
-                const presetW = size.w ?? (isExpanded ? 720 : 384);
-                const presetH = size.h ?? (isExpanded ? 640 : 450);
-                resizingRef.current = { startX, startY, presetW, presetH };
-
-                const onMove = (ev) => {
-                    if (!resizingRef.current) return;
-                    const { startX, startY, presetW, presetH } = resizingRef.current;
-                    const dx = startX - ev.clientX;
-                    const dy = startY - ev.clientY;
-                    const newW = Math.max(320, Math.min(window.innerWidth - 40, presetW + dx));
-                    const newH = Math.max(360, Math.min(window.innerHeight - 60, presetH + dy));
-                    setSize({ w: newW, h: newH });
-                };
-                const onUp = () => {
-                    resizingRef.current = null;
-                    window.removeEventListener('mousemove', onMove);
-                    window.removeEventListener('mouseup', onUp);
-                };
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onUp);
-            };
-
-            const toggleExpand = () => {
-                setIsExpanded(!isExpanded);
-                setSize({ w: null, h: null });
-            };
 
             const sendMessage = async () => {
                 if (!input.trim()) return;
@@ -1447,85 +1342,42 @@
                 setIsLoading(true);
 
                 try {
+                    // Send message to our secure Netlify Function
                     const response = await fetch('/.netlify/functions/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messages: newMessages.filter(m => m.role !== 'system') })
                     });
-
-                    let data = null;
-                    let rawText = '';
-                    try {
-                        rawText = await response.text();
-                        data = rawText ? JSON.parse(rawText) : null;
-                    } catch (parseErr) {
-                        // body wasn't JSON
-                    }
-
-                    if (!response.ok) {
-                        const errMsg = (data && (data.error || data.message)) || rawText || ('HTTP ' + response.status);
-                        setMessages([...newMessages, { role: "assistant", content: "Server error: " + errMsg }]);
-                    } else if (data && data.reply) {
+                    
+                    const data = await response.json();
+                    if (data.reply) {
                         setMessages([...newMessages, { role: "assistant", content: data.reply }]);
-                    } else if (data && data.error) {
-                        setMessages([...newMessages, { role: "assistant", content: "Error: " + data.error }]);
                     } else {
                         setMessages([...newMessages, { role: "assistant", content: "Sorry, I encountered an error checking the maths." }]);
                     }
                 } catch (error) {
-                    setMessages([...newMessages, { role: "assistant", content: "Network error: " + (error.message || 'request failed') }]);
+                    setMessages([...newMessages, { role: "assistant", content: "Network error. Please try again." }]);
                 }
                 setIsLoading(false);
             };
 
-            const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-            const widthStyle  = isMobile ? undefined : (size.w ?? (isExpanded ? 720 : 384));
-            const heightStyle = isMobile ? undefined : (size.h ?? (isExpanded ? 640 : 450));
-
             return (
                 <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
                     {isOpen && (
-                        <div
-                            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 mb-4 flex flex-col overflow-hidden fade-in relative w-[calc(100vw-3rem)] sm:w-auto h-[70vh] sm:h-auto"
-                            style={{ width: widthStyle, height: heightStyle }}
-                        >
-                            <div
-                                onMouseDown={onResizeStart}
-                                className="hidden sm:block absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-10"
-                                title="Drag to resize"
-                            >
-                                <svg viewBox="0 0 16 16" className="w-full h-full text-white/70 hover:text-white">
-                                    <path d="M0 6 L6 0 M0 10 L10 0 M0 14 L14 0" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                                </svg>
-                            </div>
-
-                            <div className="bg-blue-600 p-4 text-white font-bold flex justify-between items-center pl-6">
+                        <div className="bg-white dark:bg-slate-800 w-80 md:w-96 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 mb-4 flex flex-col overflow-hidden fade-in h-[450px]">
+                            <div className="bg-blue-600 p-4 text-white font-bold flex justify-between items-center">
                                 <span>Biomechanics Tutor</span>
-                                <div className="flex items-center gap-3">
-                                    <button onClick={toggleExpand} className="hover:text-blue-200" title={isExpanded ? "Shrink" : "Expand"}>
-                                        {isExpanded ? (
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>
-                                        ) : (
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
-                                        )}
-                                    </button>
-                                    <button onClick={() => setIsOpen(false)} className="hover:text-blue-200" title="Close">✕</button>
-                                </div>
+                                <button onClick={() => setIsOpen(false)} className="hover:text-blue-200">✕</button>
                             </div>
-
                             <div className="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 space-y-3">
-                                {messages.map((msg, idx) => {
-                                    const isUser = msg.role === 'user';
-                                    return (
-                                        <div key={idx} className={`text-sm p-3 rounded-xl max-w-[88%] ${isUser ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 mr-auto rounded-bl-none'}`}>
-                                            <MessageContent text={msg.content} isUser={isUser} />
-                                        </div>
-                                    );
-                                })}
+                                {messages.map((msg, idx) => (
+                                    <div key={idx} className={`text-sm p-3 rounded-xl max-w-[85%] ${msg.role === 'user' ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 mr-auto rounded-bl-none'}`}>
+                                        {msg.content}
+                                    </div>
+                                ))}
                                 {isLoading && <div className="text-xs text-slate-500 italic">Thinking and calculating...</div>}
                                 <div ref={messagesEndRef} />
                             </div>
-
                             <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2">
                                 <input 
                                     type="text" 
@@ -2615,4 +2467,17 @@
                             {/* REQUIRED FOOTER: Prevents the anti-tamper "Integrity Failed" error */}
                             <div id="watermark-cn" className="mt-8 text-center text-xs text-slate-500 dark:text-slate-400 w-full pt-6 border-t border-slate-200 dark:border-slate-800 opacity-100 visible">
                                 <p className="font-bold">Created by Christos Nikolaou</p>
-       
+                                <p className="italic max-w-2xl mx-auto mt-1">For educational and research purposes only. Does not substitute clinical judgement.</p>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        // Mount the React Application
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
