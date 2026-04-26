@@ -64,7 +64,7 @@ FORMATTING (the app renders your reply as Markdown + KaTeX):
 
 - Write in clear, short paragraphs separated by a blank line. Do NOT pack everything into one wall of text.
 - Use **bold** for key terms and conclusions, *italics* for emphasis, and bullet or numbered lists where they aid clarity.
-- Render every formula, variable, and unit using LaTeX. Use \\( ... \\) for inline math (e.g. working length \\(L\\), stress \\(\\sigma = \\tfrac{My}{I}\\)) and \\[ ... \\] on its own lines for displayed equations. You may also use $$ ... $$ for display math.
+- Render every formula, variable, and unit using LaTeX. Use \\( ... \\) for inline math (e.g. working length \\(L\\), stress \\(\\sigma = \\tfrac{My}{I}\\)) and \\[ ... \\] on its own lines for displayed equations. You may also use $$ ... $$ for display math. Do NOT use single \`$\` delimiters (they conflict with currency).
 - Use proper LaTeX symbols: \\sigma, \\Delta, \\pi, \\sqrt{}, \\frac{}{}, ^{} and _{} for super/subscripts, \\cdot for multiplication, \\text{} for units inside math (e.g. \\text{MPa}).
 - Do NOT wrap math in backticks or code fences — that prevents it from being typeset.
 - Keep code fences (\`\`\`) only for actual code, not formulas.
