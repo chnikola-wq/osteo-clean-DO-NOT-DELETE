@@ -25,6 +25,9 @@ exports.handler = async function(event, context) {
     try {
         const { messages } = JSON.parse(event.body);
         const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set.' }) };
+        }
 
         // ============================================================
         // SYSTEM PROMPT — emphasises reasoning over recall.
@@ -60,7 +63,18 @@ ANSWER STRUCTURE — use on every substantive question:
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
-Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.`;
+Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.
+
+TEXT FORMATTING — your replies are rendered as Markdown in the chat UI, so use Markdown formatting throughout:
+- Use **bold** for key terms, section headings, and important values.
+- Use bullet lists (\`- item\`) for enumerations, steps, or comparisons.
+- Use numbered lists (\`1. item\`) for sequential steps or ranked findings.
+- Use \`##\` or \`###\` headings only when a reply is long enough to benefit from clear sections.
+- Keep paragraphs short — one or two sentences each.
+- Never output raw HTML tags.
+
+FORMULA FORMATTING — this applies to every formula you write in your answers:
+Write all formulas using LaTeX math syntax so they render as typeset equations in the chat UI. Wrap inline expressions with single dollar signs, e.g. $\sigma = \frac{n \cdot M \cdot y}{AMI}$. Wrap standalone / display equations with double dollar signs on their own line, e.g. $$K_{plate} = \frac{E \cdot I_p}{L}$$. Use proper LaTeX for fractions (\frac{}{}), subscripts (_{...}), superscripts (^{...}), square roots (\sqrt{}), and Greek letters (\sigma, \delta, \Delta, etc.). This rule applies everywhere — inline mentions, displayed equations, and tool-result summaries.`;
 
         // ============================================================
         // TOOL DEFINITION — Tab 3 / Model 3 P-Delta calculator
@@ -98,7 +112,12 @@ Be concise and professional. Surgeons are time-poor. The "From the app" section 
                     messages: messageHistory
                 })
             });
-            return res.json();
+            const json = await res.json();
+            if (!res.ok) {
+                const msg = json?.error?.message || JSON.stringify(json);
+                throw new Error(`Anthropic API error ${res.status}: ${msg}`);
+            }
+            return json;
         }
 
         let data = await callClaude(messages);
@@ -145,10 +164,14 @@ Be concise and professional. Surgeons are time-poor. The "From the app" section 
             data = await callClaude(followUpMessages);
         }
 
-        const replyText = data.content
+        const replyText = (data.content || [])
             .filter(block => block.type === "text")
             .map(block => block.text)
             .join("\n");
+
+        if (!replyText) {
+            throw new Error(`No text reply from model. stop_reason=${data.stop_reason}`);
+        }
 
         return {
             statusCode: 200,
