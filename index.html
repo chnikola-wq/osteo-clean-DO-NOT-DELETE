@@ -78,6 +78,13 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Slow attention pulse for the Biomechanics Tutor button */
+        @keyframes pulse-slow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+            50%      { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+        }
+        .animate-pulse-slow { animation: pulse-slow 2.6s ease-out infinite; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
@@ -1388,8 +1395,12 @@
                     )}
                     
                     {!isOpen && (
-                        <button onClick={() => setIsOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-xl transition-transform hover:scale-110 flex items-center justify-center">
+                        <button
+                            onClick={() => setIsOpen(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white pl-5 pr-6 py-3.5 rounded-full shadow-xl ring-4 ring-blue-500/30 hover:ring-blue-500/40 transition-all hover:scale-105 flex items-center gap-2.5 font-bold text-sm md:text-base tracking-wide animate-pulse-slow"
+                        >
                             <IconActivity />
+                            <span>Biomechanics Tutor</span>
                         </button>
                     )}
                 </div>
