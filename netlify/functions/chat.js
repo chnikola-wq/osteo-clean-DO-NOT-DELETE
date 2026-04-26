@@ -155,5 +155,11 @@ Be concise and professional. Surgeons are time-poor. The "From the app" section 
             body: JSON.stringify({ reply: replyText })
         };
 
-    } catch (error) {
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+     } catch (error) {
+        console.error('Function error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: error.message, stack: error.stack })
+        };
+    }
+};
