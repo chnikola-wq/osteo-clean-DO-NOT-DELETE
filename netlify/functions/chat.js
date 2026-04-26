@@ -25,6 +25,9 @@ exports.handler = async function(event, context) {
     try {
         const { messages } = JSON.parse(event.body);
         const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set.' }) };
+        }
 
         // ============================================================
         // SYSTEM PROMPT — emphasises reasoning over recall.
@@ -109,7 +112,12 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     messages: messageHistory
                 })
             });
-            return res.json();
+            const json = await res.json();
+            if (!res.ok) {
+                const msg = json?.error?.message || JSON.stringify(json);
+                throw new Error(`Anthropic API error ${res.status}: ${msg}`);
+            }
+            return json;
         }
 
         let data = await callClaude(messages);
@@ -156,10 +164,14 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             data = await callClaude(followUpMessages);
         }
 
-        const replyText = data.content
+        const replyText = (data.content || [])
             .filter(block => block.type === "text")
             .map(block => block.text)
             .join("\n");
+
+        if (!replyText) {
+            throw new Error(`No text reply from model. stop_reason=${data.stop_reason}`);
+        }
 
         return {
             statusCode: 200,
