@@ -30,6 +30,13 @@
     <!-- KaTeX for LaTeX Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+
+    <!-- Marked for Markdown rendering of Tutor responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+
+    <!-- DOMPurify to sanitise rendered Markdown HTML before insertion -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -85,6 +92,52 @@
             50%      { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
         }
         .animate-pulse-slow { animation: pulse-slow 2.6s ease-out infinite; }
+
+        /* Tutor panel: user-resizable from the bottom-right corner */
+        .tutor-panel {
+            resize: both;
+            overflow: hidden;
+        }
+
+        /* Lightweight typography for rendered Markdown inside Tutor replies */
+        .tutor-content > :first-child { margin-top: 0; }
+        .tutor-content > :last-child  { margin-bottom: 0; }
+        .tutor-content p { margin: 0 0 0.6em 0; line-height: 1.5; }
+        .tutor-content strong { font-weight: 700; }
+        .tutor-content em { font-style: italic; }
+        .tutor-content ul, .tutor-content ol { margin: 0 0 0.6em 1.25em; padding: 0; }
+        .tutor-content ul { list-style: disc; }
+        .tutor-content ol { list-style: decimal; }
+        .tutor-content li { margin: 0.15em 0; }
+        .tutor-content code {
+            background: rgba(148, 163, 184, 0.2);
+            padding: 0.05em 0.35em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .tutor-content pre {
+            background: rgba(15, 23, 42, 0.08);
+            padding: 0.6em 0.8em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.4em 0 0.8em 0;
+        }
+        .dark .tutor-content pre { background: rgba(15, 23, 42, 0.6); }
+        .tutor-content h1, .tutor-content h2, .tutor-content h3, .tutor-content h4 {
+            font-weight: 700;
+            margin: 0.5em 0 0.3em 0;
+        }
+        .tutor-content h1 { font-size: 1.05em; }
+        .tutor-content h2 { font-size: 1.0em; }
+        .tutor-content h3, .tutor-content h4 { font-size: 0.95em; }
+        .tutor-content a { color: #2563eb; text-decoration: underline; }
+        .dark .tutor-content a { color: #60a5fa; }
+        /* Display math should be allowed to scroll horizontally on narrow panels */
+        .tutor-content .katex-display {
+            margin: 0.5em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
@@ -1323,8 +1376,46 @@
             );
         };
 
+        // Renders an assistant message as Markdown with KaTeX-rendered LaTeX.
+        // Math delimiters supported: \( … \), \[ … \], $$ … $$, $ … $.
+        const TutorMessageContent = ({ text }) => {
+            const containerRef = useRef(null);
+            useEffect(() => {
+                const el = containerRef.current;
+                if (!el) return;
+                let html = text;
+                if (window.marked && typeof window.marked.parse === 'function') {
+                    try {
+                        html = window.marked.parse(text, { breaks: true, gfm: true });
+                    } catch (e) {
+                        html = text;
+                    }
+                }
+                if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+                    html = window.DOMPurify.sanitize(html);
+                }
+                el.innerHTML = html;
+                if (typeof window.renderMathInElement === 'function') {
+                    try {
+                        window.renderMathInElement(el, {
+                            delimiters: [
+                                { left: '$$', right: '$$', display: true },
+                                { left: '\\[', right: '\\]', display: true },
+                                { left: '\\(', right: '\\)', display: false },
+                                { left: '$',  right: '$',  display: false }
+                            ],
+                            throwOnError: false,
+                            ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+                        });
+                    } catch (e) { /* ignore render errors */ }
+                }
+            }, [text]);
+            return <div ref={containerRef} className="tutor-content" />;
+        };
+
         const AiTutorWidget = () => {
             const [isOpen, setIsOpen] = useState(false);
+            const [isExpanded, setIsExpanded] = useState(false);
             const [messages, setMessages] = useState([{ role: "assistant", content: "Hello! I am your biomechanics assistant. Ask me how working length or offset affects construct stability." }]);
             const [input, setInput] = useState("");
             const [isLoading, setIsLoading] = useState(false);
@@ -1361,24 +1452,45 @@
                 setIsLoading(false);
             };
 
+            // Compact default; expanded toggle gives a much larger workspace.
+            // The panel is also user-resizable from the bottom-right corner via CSS `resize: both`.
+            const panelSizeClass = isExpanded
+                ? "w-[min(90vw,900px)] h-[min(85vh,800px)]"
+                : "w-80 md:w-96 h-[450px]";
+
             return (
                 <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
                     {isOpen && (
-                        <div className="bg-white dark:bg-slate-800 w-80 md:w-96 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 mb-4 flex flex-col overflow-hidden fade-in h-[450px]">
-                            <div className="bg-blue-600 p-4 text-white font-bold flex justify-between items-center">
+                        <div
+                            className={`tutor-panel bg-white dark:bg-slate-800 ${panelSizeClass} rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 mb-4 flex flex-col fade-in`}
+                            style={{ minWidth: '320px', minHeight: '380px', maxWidth: '95vw', maxHeight: '90vh' }}
+                        >
+                            <div className="bg-blue-600 p-4 text-white font-bold flex justify-between items-center rounded-t-2xl">
                                 <span>Biomechanics Tutor</span>
-                                <button onClick={() => setIsOpen(false)} className="hover:text-blue-200">✕</button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setIsExpanded(v => !v)}
+                                        className="hover:text-blue-200 text-lg leading-none"
+                                        title={isExpanded ? "Restore" : "Maximise"}
+                                        aria-label={isExpanded ? "Restore tutor window" : "Maximise tutor window"}
+                                    >
+                                        {isExpanded ? '🗗' : '🗖'}
+                                    </button>
+                                    <button onClick={() => setIsOpen(false)} className="hover:text-blue-200" aria-label="Close tutor">✕</button>
+                                </div>
                             </div>
                             <div className="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 space-y-3">
                                 {messages.map((msg, idx) => (
-                                    <div key={idx} className={`text-sm p-3 rounded-xl max-w-[85%] ${msg.role === 'user' ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 mr-auto rounded-bl-none'}`}>
-                                        {msg.content}
+                                    <div key={idx} className={`text-sm p-3 rounded-xl ${msg.role === 'user' ? 'bg-blue-600 text-white ml-auto rounded-br-none max-w-[85%]' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 mr-auto rounded-bl-none max-w-[92%]'}`}>
+                                        {msg.role === 'assistant'
+                                            ? <TutorMessageContent text={msg.content} />
+                                            : msg.content}
                                     </div>
                                 ))}
                                 {isLoading && <div className="text-xs text-slate-500 italic">Thinking and calculating...</div>}
                                 <div ref={messagesEndRef} />
                             </div>
-                            <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                            <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex gap-2 rounded-b-2xl">
                                 <input 
                                     type="text" 
                                     value={input} 

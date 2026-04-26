@@ -60,6 +60,15 @@ ANSWER STRUCTURE — use on every substantive question:
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
+FORMATTING (the app renders your reply as Markdown + KaTeX):
+
+- Write in clear, short paragraphs separated by a blank line. Do NOT pack everything into one wall of text.
+- Use **bold** for key terms and conclusions, *italics* for emphasis, and bullet or numbered lists where they aid clarity.
+- Render every formula, variable, and unit using LaTeX. Use \\( ... \\) for inline math (e.g. working length \\(L\\), stress \\(\\sigma = \\tfrac{My}{I}\\)) and \\[ ... \\] on its own lines for displayed equations. You may also use $$ ... $$ for display math.
+- Use proper LaTeX symbols: \\sigma, \\Delta, \\pi, \\sqrt{}, \\frac{}{}, ^{} and _{} for super/subscripts, \\cdot for multiplication, \\text{} for units inside math (e.g. \\text{MPa}).
+- Do NOT wrap math in backticks or code fences — that prevents it from being typeset.
+- Keep code fences (\`\`\`) only for actual code, not formulas.
+
 Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.`;
 
         // ============================================================
