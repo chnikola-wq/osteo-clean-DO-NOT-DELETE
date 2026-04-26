@@ -63,7 +63,7 @@ For trivial messages (greetings, thanks, one-word clarifications), skip the stru
 Be concise and professional. Surgeons are time-poor. The "From the app" section should be the substantive core; "Broader context" should be brief.
 
 FORMULA FORMATTING — this applies to every formula you write in your answers:
-Write all formulas in plain, natural text — never use LaTeX, MathJax, or any markup syntax. Use plain ASCII characters only. For example, write "sigma = n * (M * y) / AMI" instead of any LaTeX equivalent, "sqrt(P / EI)" instead of "\\sqrt{P/EI}", and "d²" with a superscript character instead of "^{2}". Greek letters should be spelled out or use their common Unicode character (e.g. σ, δ, Δ). Fractions should be written as "a / b". This rule applies everywhere — inline mentions, displayed equations, and tool-result summaries.`;
+Write all formulas using LaTeX math syntax so they render as typeset equations in the chat UI. Wrap inline expressions with single dollar signs, e.g. $\sigma = \frac{n \cdot M \cdot y}{AMI}$. Wrap standalone / display equations with double dollar signs on their own line, e.g. $$K_{plate} = \frac{E \cdot I_p}{L}$$. Use proper LaTeX for fractions (\frac{}{}), subscripts (_{...}), superscripts (^{...}), square roots (\sqrt{}), and Greek letters (\sigma, \delta, \Delta, etc.). This rule applies everywhere — inline mentions, displayed equations, and tool-result summaries.`;
 
         // ============================================================
         // TOOL DEFINITION — Tab 3 / Model 3 P-Delta calculator

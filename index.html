@@ -114,6 +114,75 @@
             return <span dangerouslySetInnerHTML={{ __html: html }} className="inline-block font-serif text-[1.05em] leading-normal" />;
         };
 
+        // Renders a chat message that may contain LaTeX delimiters:
+        //   $$...$$ → block / display math
+        //   $...$   → inline math
+        // Plain text segments are rendered as-is.
+        const MathMessage = ({ content }) => {
+            const parts = useMemo(() => {
+                const result = [];
+                // Split on $$...$$ first (display math), then $...$ (inline math)
+                const displayRe = /\$\$([\s\S]+?)\$\$/g;
+                const inlineRe = /\$((?:[^$]|\\\$)+?)\$/g;
+                let lastIndex = 0;
+                let match;
+                // Collect all display-math spans
+                const displaySpans = [];
+                while ((match = displayRe.exec(content)) !== null) {
+                    displaySpans.push({ start: match.index, end: match.index + match[0].length, math: match[1], display: true });
+                }
+                // Walk through the string using display spans as anchors
+                let pos = 0;
+                for (const span of displaySpans) {
+                    if (pos < span.start) {
+                        // process inline math in the gap
+                        const gap = content.slice(pos, span.start);
+                        let gapLast = 0;
+                        let m2;
+                        const ir = new RegExp(inlineRe.source, 'g');
+                        while ((m2 = ir.exec(gap)) !== null) {
+                            if (gapLast < m2.index) result.push({ type: 'text', value: gap.slice(gapLast, m2.index) });
+                            result.push({ type: 'inline', value: m2[1] });
+                            gapLast = m2.index + m2[0].length;
+                        }
+                        if (gapLast < gap.length) result.push({ type: 'text', value: gap.slice(gapLast) });
+                    }
+                    result.push({ type: 'display', value: span.math });
+                    pos = span.end;
+                }
+                // Remaining tail
+                if (pos < content.length) {
+                    const tail = content.slice(pos);
+                    let tailLast = 0;
+                    let m3;
+                    const ir2 = new RegExp(inlineRe.source, 'g');
+                    while ((m3 = ir2.exec(tail)) !== null) {
+                        if (tailLast < m3.index) result.push({ type: 'text', value: tail.slice(tailLast, m3.index) });
+                        result.push({ type: 'inline', value: m3[1] });
+                        tailLast = m3.index + m3[0].length;
+                    }
+                    if (tailLast < tail.length) result.push({ type: 'text', value: tail.slice(tailLast) });
+                }
+                return result;
+            }, [content]);
+
+            return (
+                <span>
+                    {parts.map((part, i) => {
+                        if (part.type === 'display') {
+                            const html = window.katex ? window.katex.renderToString(part.value, { throwOnError: false, displayMode: true }) : part.value;
+                            return <span key={i} className="block my-1 overflow-x-auto" dangerouslySetInnerHTML={{ __html: html }} />;
+                        }
+                        if (part.type === 'inline') {
+                            const html = window.katex ? window.katex.renderToString(part.value, { throwOnError: false, displayMode: false }) : part.value;
+                            return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
+                        }
+                        return <span key={i}>{part.value}</span>;
+                    })}
+                </span>
+            );
+        };
+
         // Dynamic Bound Helper for scaling axes neatly
         const getDynamicBounds = (min, max) => {
             const range = max - min;
@@ -1372,7 +1441,7 @@
                             <div className="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 space-y-3">
                                 {messages.map((msg, idx) => (
                                     <div key={idx} className={`text-sm p-3 rounded-xl max-w-[85%] ${msg.role === 'user' ? 'bg-blue-600 text-white ml-auto rounded-br-none' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 mr-auto rounded-bl-none'}`}>
-                                        {msg.content}
+                                        <MathMessage content={msg.content} />
                                     </div>
                                 ))}
                                 {isLoading && <div className="text-xs text-slate-500 italic">Thinking and calculating...</div>}
