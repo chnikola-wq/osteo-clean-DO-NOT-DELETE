@@ -112,9 +112,13 @@ ANSWER STRUCTURE — use on every substantive question:
 
 **Broader context:** Add a short second section that places the app's answer in the wider biomechanics / orthopaedic evidence base — clinical caveats, alternative considerations, related work. This section MUST be grounded in (a) the curated <app_literature> entries that match the scenario and (b) the injected \`<prefetched_pubmed_results>\` for this turn — not in unsupported recall. You may paraphrase findings from the curated library and refer to PubMed-hit titles/authors generically (e.g. "a recent PubMed hit by X et al. on bridge plating in torsion"); reserve the formal citation list for the **Literature:** / **PubMed (live):** sections below. Make clear when a statement is your general background knowledge rather than something supported by either source.
 
-**Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. This section is curated-library-only — never include PubMed hits here. Omit the section entirely on questions where references were not requested.
+**Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. This section is curated-library-only — never include PubMed hits here. If the curated library currently contains nothing real for this scenario (e.g. only PLACEHOLDER entries, or no direct/partial/tangential match), say so in ONE short sentence and move on — do NOT pad. Omit the section entirely on questions where references were not requested.
 
-**PubMed (live):** Include this section ONLY when the user has asked for references / evidence / current literature / PubMed / "what does the literature say" / "any studies on…" or similar. When included, format as a short list of database hits (title, first author et al., journal, year, PMID, DOI if any, URL), each with a one-line note that it is a live PubMed result, not a paper from the curated library, and that the surgeon should verify relevance. Omit the section entirely on turns where the user did not ask for references — even if a pre-fetched PubMed block is present in the prompt (you used it silently to ground **Broader context**).
+**PubMed (live):** Include this section ONLY when the user has asked for references / evidence / current literature / PubMed / "what does the literature say" / "any studies on…" / "what literature did you use" / "what sources" / similar. When included, format as a short list of database hits (title, first author et al., journal, year, PMID, DOI if any, URL), each with a one-line note that it is a live PubMed result, not a paper from the curated library, and that the surgeon should verify relevance. Omit the section entirely on turns where the user did not ask for references — even if a pre-fetched PubMed block is present in the prompt (you used it silently to ground **Broader context**).
+
+EMPTY-LIBRARY RULE: If the curated <app_literature> contains only PLACEHOLDER entries (or otherwise no real manuscripts), the **Literature:** section can ONLY ever say "The curated app library currently has no real entries for this scenario." That single sentence is the entire section — do NOT trail off, do NOT explain further, and do NOT leave a sentence dangling. The substantive evidence in that case lives in **PubMed (live):** (when rendered) and as paraphrased grounding in **Broader context**. When the user asks "what literature did you use?" and the curated library is empty, your answer's centre of gravity must be the **PubMed (live):** section — that is where the evidence you actually consulted lives — preceded by the one-sentence note that the curated library is empty.
+
+META-QUESTIONS about a previous answer ("what literature did you use?", "where did that number come from?", "show me your sources", "cite that") are NOT trivial but also do NOT require the full **From the app** / **Broader context** preamble. Reply with the relevant citation sections only (**Literature:** and/or **PubMed (live):**, whichever apply), preceded by at most one orienting sentence. Do not re-derive the previous answer.
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
@@ -296,7 +300,12 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             const effortLevel = effort === "high" ? "high" : "low";
             const body = {
                 model: "claude-opus-4-7",
-                max_tokens: 8000,
+                // Adaptive thinking tokens are billed against `max_tokens`,
+                // so a long internal reasoning pass can leave very little
+                // headroom for the actual reply and surface as a reply that
+                // truncates mid-sentence (e.g. "Literature: The curated app
+                // library ("). Give the response budget meaningful room.
+                max_tokens: 16000,
                 system: systemOverride || systemPrompt,
                 tools: tools,
                 messages: messageHistory,
@@ -392,8 +401,11 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         }
 
         // Detects explicit literature/evidence requests — controls
-        // whether the citation lists are RENDERED in the reply.
-        const LITERATURE_REQUEST = /\b(what does (the )?literature|literature say|evidence|recent papers?|pubmed|current literature|what.*stud(y|ies)|what.*research|papers? on|any (studies|papers|research)|references?|citations?|cite|sources?)\b/i;
+        // whether the citation lists are RENDERED in the reply. Includes
+        // meta-question phrasings like "what literature did you use",
+        // "what sources", "where did that come from", which are common
+        // follow-ups after a turn that consulted the literature silently.
+        const LITERATURE_REQUEST = /\b(what does (the )?literature|literature say|what literature|literature (used|did you|you used)|evidence|recent papers?|pubmed|current literature|what.*stud(y|ies)|what.*research|papers? on|any (studies|papers|research)|references?|citations?|cite|sources?|where (did|does).*(come|from))\b/i;
         const userAskedForReferences = LITERATURE_REQUEST.test(lastUser);
         const isSubstantive = !isTrivialMessage(lastUser);
 
