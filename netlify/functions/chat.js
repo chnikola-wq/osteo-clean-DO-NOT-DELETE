@@ -275,13 +275,29 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return { error: `Unknown tool: ${name}` };
         }
 
-        async function callClaude(messageHistory, { thinking, systemOverride } = {}) {
+        // Netlify's hard cap on synchronous functions is 26 s. We abort the
+        // upstream Anthropic call a few seconds before that so the function
+        // can return a structured JSON error (which the UI surfaces as
+        // "Sorry, encountered an error… (timed out)") instead of letting
+        // Netlify kill the lambda and hand the browser an HTML 504 — which
+        // would crash `response.json()` on the client and surface the
+        // misleading generic "Network error. Please try again." toast.
+        const ANTHROPIC_TIMEOUT_MS = 22000;
+
+        async function callClaude(messageHistory, { effort, systemOverride } = {}) {
             // Claude Opus 4.7 replaced the legacy
             // `thinking: { type: "enabled", budget_tokens: N }` contract with
             // `thinking: { type: "adaptive" }` plus `output_config.effort`.
-            // We pass adaptive thinking on every call and modulate depth via
-            // the effort knob so trivial turns stay cheap and substantive
-            // turns get room to run the LITERATURE PROTOCOL pre-flight.
+            // `effort` is a CEILING on adaptive thinking depth — Claude still
+            // scales up on its own when the prompt warrants it. We therefore
+            // reserve the expensive "high" tier for the literature pre-flight
+            // (which has to run the multi-step LITERATURE PROTOCOL classifier
+            // across every entry in <app_literature>), and let everything
+            // else run at "low". On a substantive non-literature turn — e.g.
+            // "is it better to change material or upsize the plate?" — high
+            // effort blew past Netlify's 26 s function limit and surfaced as
+            // a generic "Network error" in the UI.
+            const effortLevel = effort === "high" ? "high" : "low";
             const body = {
                 model: "claude-opus-4-7",
                 max_tokens: 8000,
@@ -289,17 +305,31 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 tools: tools,
                 messages: messageHistory,
                 thinking: { type: "adaptive" },
-                output_config: { effort: thinking ? "high" : "low" }
+                output_config: { effort: effortLevel }
             };
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey,
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify(body)
-            });
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
+            let res;
+            try {
+                res = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify(body),
+                    signal: controller.signal
+                });
+            } catch (err) {
+                if (err && err.name === "AbortError") {
+                    throw new Error(`Anthropic API call timed out after ${ANTHROPIC_TIMEOUT_MS} ms.`);
+                }
+                throw err;
+            } finally {
+                clearTimeout(timeoutId);
+            }
             const json = await res.json();
             if (!res.ok) {
                 const msg = json?.error?.message || JSON.stringify(json);
@@ -309,14 +339,18 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         }
 
         // ============================================================
-        // Decide whether this turn warrants extended thinking. Trivial
-        // turns (greetings, thanks, one-word acks) skip it to keep
-        // latency and cost down; everything else gets the deeper budget
-        // so the LITERATURE PROTOCOL has room to run.
+        // Decide whether this turn warrants the expensive "high" effort
+        // tier. We only spend it when the literature pre-flight is
+        // running (see the LITERATURE PROTOCOL in the system prompt) —
+        // that's the path that has to walk every entry in
+        // <app_literature> against the scenario context.
         //
-        // Bias: when in doubt, ENABLE thinking. A wasted thinking
-        // budget on a chatty acknowledgement is far cheaper than a
-        // shallow answer on a real biomechanics question.
+        // Trivial turns (greetings, thanks, one-word acks) and ordinary
+        // substantive biomechanics turns both run at "low". Adaptive
+        // thinking still scales internally when the prompt warrants it,
+        // and "low" comfortably finishes inside Netlify's 26 s function
+        // limit — "high" did not, and surfaced as a generic
+        // "Network error" in the chat UI.
         // ============================================================
         function lastUserText(history) {
             for (let i = history.length - 1; i >= 0; i--) {
@@ -332,22 +366,15 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return "";
         }
 
-        // A message is treated as trivial only if BOTH:
-        //  (a) it is short (no real question can be asked in this many chars), AND
-        //  (b) it starts with a known greeting/ack token and contains no
-        //      question mark or technical signal.
-        // Anything else falls through to extended thinking.
-        const TRIVIAL_MAX_CHARS = 60;
-        const TRIVIAL_PREFIX = /^(hi|hello|hey|thanks?|thank you|ty|ok|okay|got it|cool|great|sure|yes|yeah|yep|no|nope|nice|perfect|awesome)\b/i;
-        const TECHNICAL_SIGNAL = /\?|\bmodel\b|\bplate\b|\bbone\b|\bgap\b|\bbridg|\bclosed\b|\bworking length\b|\baxial\b|\btorsion\b|\bbending\b|\bstress\b|\bstiffness\b|\bscrew\b|\bliterature\b|\bpaper\b|\breference\b|\bcitation\b/i;
-
+        // ============================================================
+        // The trivial-vs-substantive classifier was previously used to
+        // gate `effort: "high"`. We now reserve "high" exclusively for
+        // the literature pre-flight (decided below from
+        // `prefetchedPubmedJSON`), so this classifier is no longer
+        // consulted — but `lastUser` is still needed below to detect
+        // literature requests and to build the PubMed query.
+        // ============================================================
         const lastUser = lastUserText(messages).trim();
-        const looksTrivial =
-            lastUser.length > 0 &&
-            lastUser.length <= TRIVIAL_MAX_CHARS &&
-            TRIVIAL_PREFIX.test(lastUser) &&
-            !TECHNICAL_SIGNAL.test(lastUser);
-        const useThinking = !looksTrivial;
 
         // ============================================================
         // PROACTIVE PUBMED PRE-FETCH
@@ -434,7 +461,15 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched for this turn (see above). Use them directly in your **PubMed (live):** section following the LITERATURE PROTOCOL §E rules. Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
         }
 
-        let data = await callClaude(messages, { thinking: useThinking, systemOverride: firstCallSystem });
+        // Spend the "high" effort tier only when we are actually running
+        // the literature pre-flight (the LITERATURE PROTOCOL multi-step
+        // classifier needs the room). All other turns — trivial AND
+        // ordinary substantive biomechanics questions — run at "low" so
+        // they finish inside Netlify's 26 s function limit. Adaptive
+        // thinking still scales internally when the prompt warrants it.
+        const effort = prefetchedPubmedJSON ? "high" : "low";
+
+        let data = await callClaude(messages, { effort, systemOverride: firstCallSystem });
 
         // ============================================================
         // TOOL EXECUTION LOOP
@@ -466,7 +501,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 { role: "user", content: toolResults }
             ];
 
-            data = await callClaude(conversation, { thinking: useThinking });
+            data = await callClaude(conversation, { effort });
         }
 
         const replyText = (data.content || [])
