@@ -1,3 +1,7 @@
 [functions]
   directory = "netlify/functions"
-  included_files = ["netlify/functions/app-knowledge.md"]
+  included_files = ["netlify/functions/app-knowledge.md", "netlify/functions/literature.md"]
+  node_bundler = "esbuild"
+
+[functions.chat]
+  timeout = 26

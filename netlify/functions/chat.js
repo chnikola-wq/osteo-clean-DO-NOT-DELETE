@@ -275,7 +275,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return { error: `Unknown tool: ${name}` };
         }
 
-        async function callClaude(messageHistory, { thinking } = {}) {
+        async function callClaude(messageHistory, { thinking, systemOverride } = {}) {
             // Claude Opus 4.7 replaced the legacy
             // `thinking: { type: "enabled", budget_tokens: N }` contract with
             // `thinking: { type: "adaptive" }` plus `output_config.effort`.
@@ -285,7 +285,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             const body = {
                 model: "claude-opus-4-7",
                 max_tokens: 8000,
-                system: systemPrompt,
+                system: systemOverride || systemPrompt,
                 tools: tools,
                 messages: messageHistory,
                 thinking: { type: "adaptive" },
@@ -349,7 +349,92 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             !TECHNICAL_SIGNAL.test(lastUser);
         const useThinking = !looksTrivial;
 
-        let data = await callClaude(messages, { thinking: useThinking });
+        // ============================================================
+        // PROACTIVE PUBMED PRE-FETCH
+        // When the user asks about literature/evidence/references,
+        // run the PubMed search BEFORE calling Claude. The results are
+        // injected into the first (and only) Claude call via the system
+        // prompt, so Claude never needs to invoke the search_pubmed tool
+        // on this turn. This avoids the two-Claude-call round-trip that
+        // would time out on Netlify's function limit.
+        // ============================================================
+
+        // Detects explicit literature/evidence requests.
+        const LITERATURE_REQUEST = /\b(what does (the )?literature|literature say|evidence|recent papers?|pubmed|current literature|what.*stud(y|ies)|what.*research|papers? on|any (studies|papers|research)|references?|citations?)\b/i;
+
+        // Extracts a focused PubMed query from the last few messages by
+        // matching key clinical/biomechanical terms from the conversation.
+        function buildPubmedQuery(history) {
+            const recent = history.slice(-4);
+            const text = recent.map(m => {
+                if (typeof m.content === 'string') return m.content;
+                if (Array.isArray(m.content)) {
+                    return m.content.filter(b => b.type === 'text').map(b => b.text).join(' ');
+                }
+                return '';
+            }).join(' ').toLowerCase();
+
+            const terms = [];
+
+            // Plate construct (highest priority)
+            if (/bridge plating|bridging construct|bridging osteosynthesis/.test(text)) {
+                terms.push('bridge plating');
+            } else if (/locking plate|locked plate/.test(text)) {
+                terms.push('locking plate');
+            } else {
+                terms.push('locking plate'); // fallback
+            }
+
+            // Material
+            if (/titanium/.test(text)) terms.push('titanium');
+            if (/stainless steel/.test(text)) terms.push('stainless steel');
+
+            // Biomechanical parameters
+            if (/working length/.test(text)) terms.push('working length');
+            if (/stiffness/.test(text)) terms.push('stiffness');
+            if (/fatigue/.test(text)) terms.push('fatigue failure');
+            if (/stress shielding/.test(text)) terms.push('stress shielding');
+
+            // Loading mode
+            if (/axial/.test(text)) terms.push('axial compression');
+            if (/torsion/.test(text)) terms.push('torsion');
+            if (/bending/.test(text)) terms.push('bending');
+
+            // Anatomy
+            if (/femur|femoral/.test(text)) terms.push('femur');
+            if (/tibia|tibial/.test(text)) terms.push('tibia');
+            if (/humerus|humeral/.test(text)) terms.push('humerus');
+            if (/fracture/.test(text)) terms.push('fracture fixation');
+
+            // Cap at 6 terms to keep the query focused
+            return terms.slice(0, 6).join(' ');
+        }
+
+        let prefetchedPubmedJSON = null;
+        let prefetchedPubmedQuery = '';
+
+        if (LITERATURE_REQUEST.test(lastUser)) {
+            prefetchedPubmedQuery = buildPubmedQuery(messages);
+            if (prefetchedPubmedQuery) {
+                try {
+                    const pubmedData = await runSearchPubmed({ query: prefetchedPubmedQuery, max_results: 5 });
+                    prefetchedPubmedJSON = JSON.stringify(pubmedData, null, 2);
+                } catch (pubmedErr) {
+                    // Non-fatal: if pre-fetch fails Claude will fall back to the tool
+                    console.error('Proactive PubMed pre-fetch failed:', pubmedErr);
+                }
+            }
+        }
+
+        // Build the system prompt for this turn, injecting pre-fetched
+        // PubMed results when available so Claude can answer in one call.
+        let firstCallSystem = systemPrompt;
+        if (prefetchedPubmedJSON) {
+            firstCallSystem = systemPrompt +
+                `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched for this turn (see above). Use them directly in your **PubMed (live):** section following the LITERATURE PROTOCOL §E rules. Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
+        }
+
+        let data = await callClaude(messages, { thinking: useThinking, systemOverride: firstCallSystem });
 
         // ============================================================
         // TOOL EXECUTION LOOP
