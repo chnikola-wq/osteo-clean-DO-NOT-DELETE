@@ -98,13 +98,25 @@ C. When you present the references in your answer:
 
 D. The **From the app** section may only cite papers from <app_literature>. Anything you recall from your general training stays inside **Broader context** and must be flagged as such (e.g. "Beyond the curated library, the wider literature also reports…"). Never blur the two.
 
+E. LIVE PUBMED LOOKUPS. You have a tool called \`search_pubmed\` that queries the live PubMed database (NCBI E-utilities). Results from that tool are NOT part of your curated library and you have NOT personally read them — they are bibliographic hits only.
+   1. Call \`search_pubmed\` when EITHER:
+        - the curated <app_literature> contains no direct or partial match for the scenario the user is asking about, OR
+        - the user explicitly asks for "current literature", "recent papers", "PubMed", "what's out there", "latest evidence", or similar.
+      You may also call it when the user asks a focused evidence question that the library plainly does not cover, even without the keywords above.
+   2. Build a focused query — combine the construct (e.g. "locking plate", "bridge plating"), the scenario (e.g. "working length", "bridging osteosynthesis", "fatigue"), and the loading mode (e.g. "axial", "four-point bending", "torsion"). Keep it short; PubMed prefers concise terms.
+   3. Present PubMed results in a separate **PubMed (live):** section (see ANSWER STRUCTURE). For each hit list: title, first author + "et al.", journal, year, PMID, DOI (if present), and the URL. Add one short sentence noting it is a live database hit that has not been read by the app and whose relevance to the scenario should be confirmed by the surgeon.
+   4. NEVER move PubMed hits into **Literature:** (which is curated-only) or cite them inside **From the app:**. The provenance must remain visibly distinct.
+   5. If the tool returns zero results or errors, say so plainly; do not fabricate replacement records.
+
 ANSWER STRUCTURE — use on every substantive question:
 
 **From the app:** State which model applies and why, then walk through the formula-based reasoning to reach the answer. Cite the relevant tab and concept (e.g. "Tab 1, Concept 5 — Parallel Spring"). If the app does not cover the question, say so plainly here.
 
 **Broader context:** Add a short second section drawing on wider biomechanics and orthopaedic literature — clinical caveats, alternative considerations, related work. Make clear this is your general knowledge, not from the app.
 
-**Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. Omit the section entirely on questions where references were not requested.
+**Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. This section is curated-library-only — never include PubMed hits here. Omit the section entirely on questions where references were not requested.
+
+**PubMed (live):** Include this section ONLY when you have called \`search_pubmed\` on this turn. Format as a short list of database hits (title, first author et al., journal, year, PMID, DOI if any, URL), each with a one-line note that it is a live PubMed result, not a paper from the curated library, and that the surgeon should verify relevance. Omit the section entirely if you did not call the tool.
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
@@ -138,24 +150,147 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     },
                     required: ["workingLength"]
                 }
+            },
+            {
+                name: "search_pubmed",
+                description: "Searches the live PubMed database via NCBI E-utilities and returns bibliographic records (title, authors, journal, year, PMID, DOI, URL). Use when the curated <app_literature> has no direct or partial match for the scenario, or when the user explicitly asks for PubMed / current literature / recent papers. Results are NOT in the curated library and have NOT been read — present them in the **PubMed (live):** section, never inside **From the app** or **Literature**.",
+                input_schema: {
+                    type: "object",
+                    properties: {
+                        query: { type: "string", description: "PubMed search query. Combine construct, scenario, and loading mode (e.g. 'locking plate working length axial fatigue')." },
+                        max_results: { type: "number", description: "Maximum number of records to return (1-10). Default 5." }
+                    },
+                    required: ["query"]
+                }
             }
         ];
 
+        // ============================================================
+        // TOOL HANDLERS
+        // ============================================================
+        function runCalculateBridgingStress(args) {
+            const L = args.workingLength;
+            const I_p = args.plateAMI || 25;
+            const P = args.axialLoad || 1000;
+            const e = args.offset || 5;
+            const E = 114500; // Titanium Ti-6Al-4V
+            const y = 1.5;    // Distance to outer fibre
+
+            const EI = E * I_p;
+            const k = Math.sqrt(P / EI);
+            const secant = 1 / Math.cos((L / 2) * k);
+            const deflection = e * (secant - 1);
+            const moment = P * (e + deflection);
+            const calculatedStress = (moment * y) / I_p;
+
+            return {
+                calculated_stress_MPa: calculatedStress,
+                deflection_mm: deflection,
+                moment_Nmm: moment,
+                inputs_used: { L, I_p, P, e, E, y }
+            };
+        }
+
+        async function runSearchPubmed(args) {
+            const query = (args && typeof args.query === "string") ? args.query.trim() : "";
+            if (!query) {
+                return { error: "search_pubmed requires a non-empty 'query' string." };
+            }
+            const requested = parseInt(args.max_results, 10);
+            const retmax = Math.min(Math.max(Number.isFinite(requested) ? requested : 5, 1), 10);
+
+            // NCBI etiquette: identify the tool. No API key required for low-volume use.
+            const ncbiIdentity = {
+                tool: "osteo-locked-plating-app",
+                email: "noreply@osteo-locked-plating.app"
+            };
+
+            try {
+                const esearchParams = new URLSearchParams({
+                    db: "pubmed",
+                    term: query,
+                    retmode: "json",
+                    retmax: String(retmax),
+                    sort: "relevance",
+                    ...ncbiIdentity
+                });
+                const esearchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${esearchParams.toString()}`);
+                if (!esearchRes.ok) {
+                    return { error: `PubMed esearch failed with HTTP ${esearchRes.status}.` };
+                }
+                const esearchJson = await esearchRes.json();
+                const ids = (esearchJson && esearchJson.esearchresult && esearchJson.esearchresult.idlist) || [];
+                if (ids.length === 0) {
+                    return { query, results: [], note: "No PubMed records matched the query." };
+                }
+
+                const esumParams = new URLSearchParams({
+                    db: "pubmed",
+                    id: ids.join(","),
+                    retmode: "json",
+                    ...ncbiIdentity
+                });
+                const esumRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${esumParams.toString()}`);
+                if (!esumRes.ok) {
+                    return { error: `PubMed esummary failed with HTTP ${esumRes.status}.` };
+                }
+                const esumJson = await esumRes.json();
+                const result = (esumJson && esumJson.result) || {};
+
+                const records = ids.map(id => {
+                    const r = result[id];
+                    if (!r) return null;
+                    const authors = Array.isArray(r.authors)
+                        ? r.authors.map(a => a && a.name).filter(Boolean).slice(0, 6)
+                        : [];
+                    const articleIds = Array.isArray(r.articleids) ? r.articleids : [];
+                    const doiEntry = articleIds.find(a => a && a.idtype === "doi");
+                    const doi = doiEntry ? doiEntry.value : null;
+                    const year = typeof r.pubdate === "string" ? r.pubdate.slice(0, 4) : "";
+                    return {
+                        pmid: id,
+                        title: r.title || "(no title)",
+                        authors,
+                        journal: r.fulljournalname || r.source || "",
+                        year,
+                        doi,
+                        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`
+                    };
+                }).filter(Boolean);
+
+                return { query, results: records };
+            } catch (err) {
+                return { error: `PubMed lookup threw an exception: ${err && err.message ? err.message : String(err)}` };
+            }
+        }
+
+        async function dispatchTool(name, input) {
+            const args = input || {};
+            if (name === "calculate_bridging_stress") {
+                return runCalculateBridgingStress(args);
+            }
+            if (name === "search_pubmed") {
+                return await runSearchPubmed(args);
+            }
+            return { error: `Unknown tool: ${name}` };
+        }
+
         async function callClaude(messageHistory, { thinking } = {}) {
-            // Extended thinking, when enabled, requires max_tokens > budget_tokens.
-            // Non-trivial turns get a generous budget so the bot can run the
-            // LITERATURE PROTOCOL pre-flight (scenario reconstruction +
-            // per-entry classification) before drafting the user-facing reply.
+            // Claude Opus 4.7 replaced the legacy
+            // `thinking: { type: "enabled", budget_tokens: N }` contract with
+            // `thinking: { type: "adaptive" }` plus `output_config.effort`.
+            // We pass adaptive thinking on every call and modulate depth via
+            // the effort knob so trivial turns stay cheap and substantive
+            // turns get room to run the LITERATURE PROTOCOL pre-flight.
             const body = {
                 model: "claude-opus-4-7",
-                max_tokens: thinking ? 8000 : 1024,
+                max_tokens: 8000,
                 system: systemPrompt,
                 tools: tools,
-                messages: messageHistory
+                messages: messageHistory,
+                thinking: { type: "adaptive" },
+                output_config: { effort: thinking ? "high" : "low" }
             };
-            if (thinking) {
-                body.thinking = { type: "enabled", budget_tokens: 4000 };
-            }
             const res = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -216,46 +351,37 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
 
         let data = await callClaude(messages, { thinking: useThinking });
 
-        // Tool execution loop
-        if (data.stop_reason === "tool_use") {
-            const toolUseBlock = data.content.find(block => block.type === "tool_use");
-            const args = toolUseBlock.input;
+        // ============================================================
+        // TOOL EXECUTION LOOP
+        // The model may call any combination of tools (calculate_bridging_stress,
+        // search_pubmed) one or more times. Loop until the model stops asking
+        // for tools, with a hard cap to prevent runaway cycles.
+        // ============================================================
+        let conversation = messages;
+        const MAX_TOOL_ITERATIONS = 5;
+        let toolIterations = 0;
+        while (data.stop_reason === "tool_use" && toolIterations < MAX_TOOL_ITERATIONS) {
+            toolIterations++;
+            const toolUseBlocks = (data.content || []).filter(block => block.type === "tool_use");
+            if (toolUseBlocks.length === 0) break;
 
-            const L = args.workingLength;
-            const I_p = args.plateAMI || 25;
-            const P = args.axialLoad || 1000;
-            const e = args.offset || 5;
-            const E = 114500; // Titanium Ti-6Al-4V
-            const y = 1.5;    // Distance to outer fibre
+            const toolResults = [];
+            for (const tub of toolUseBlocks) {
+                const result = await dispatchTool(tub.name, tub.input);
+                toolResults.push({
+                    type: "tool_result",
+                    tool_use_id: tub.id,
+                    content: JSON.stringify(result)
+                });
+            }
 
-            const EI = E * I_p;
-            const k = Math.sqrt(P / EI);
-            const secant = 1 / Math.cos((L / 2) * k);
-            const deflection = e * (secant - 1);
-            const moment = P * (e + deflection);
-            const calculatedStress = (moment * y) / I_p;
-
-            const followUpMessages = [
-                ...messages,
+            conversation = [
+                ...conversation,
                 { role: "assistant", content: data.content },
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "tool_result",
-                            tool_use_id: toolUseBlock.id,
-                            content: JSON.stringify({
-                                calculated_stress_MPa: calculatedStress,
-                                deflection_mm: deflection,
-                                moment_Nmm: moment,
-                                inputs_used: { L, I_p, P, e, E, y }
-                            })
-                        }
-                    ]
-                }
+                { role: "user", content: toolResults }
             ];
 
-            data = await callClaude(followUpMessages, { thinking: useThinking });
+            data = await callClaude(conversation, { thinking: useThinking });
         }
 
         const replyText = (data.content || [])
