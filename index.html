@@ -561,8 +561,55 @@
         };
 
         // --- WIDGET 2: THE GEOMETRIC CONTRAST (Changing Plate Size) ---
+        // Vi plate library (name, width w in mm, thickness t in mm)
+        // Source: chnikola-wq/osteo-v3.8-DO-NOT-DELETE (viPlatePresets), based on Vi specs & AO standards.
+        const viPlateLibraryRaw = [
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.0mm DCP",                          w: 3.0,  t: 1.0 },
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.0mm Cuttable",                     w: 3.5,  t: 1.0 },
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.5mm DCP",                          w: 4.5,  t: 1.0 },
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.5mm Locking (DLP)",                w: 4.5,  t: 1.2 },
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.5mm Cuttable (Standard)",          w: 4.0,  t: 1.1 },
+            { system: "1.0mm / 1.5mm Systems", name: "Vi 1.5mm Cuttable (Malleable)",         w: 4.3,  t: 1.0 },
+            { system: "2.0mm System",          name: "Vi 2.0mm DCP",                          w: 5.0,  t: 1.5 },
+            { system: "2.0mm System",          name: "Vi 2.0mm Locking (DLP/Stacked)",        w: 5.0,  t: 1.5 },
+            { system: "2.0mm System",          name: "Vi 2.0mm Mini Compression",             w: 5.0,  t: 1.5 },
+            { system: "2.0mm System",          name: "Vi 2.0mm Cuttable Broad",               w: 5.5,  t: 1.5 },
+            { system: "2.0mm System",          name: "Vi 2.0mm Supracondylar",                w: 5.5,  t: 2.0 },
+            { system: "2.4mm System",          name: "Vi 2.4mm LC-DCP",                       w: 6.5,  t: 2.0 },
+            { system: "2.4mm System",          name: "Vi 2.4mm Locking (Standard DLP)",       w: 6.5,  t: 2.0 },
+            { system: "2.4mm System",          name: "Vi 2.4mm Locking (Thin DLP)",           w: 6.5,  t: 1.7 },
+            { system: "2.4mm System",          name: "Vi 2.4mm Cuttable",                     w: 5.5,  t: 1.8 },
+            { system: "2.4mm System",          name: "Vi 2.4mm Double Compression Cuttable",  w: 6.5,  t: 1.8 },
+            { system: "2.4mm System",          name: "Vi 2.4mm Supracondylar",                w: 6.5,  t: 2.0 },
+            { system: "2.7mm System",          name: "Vi 2.7mm DCP / LC-DCP",                 w: 8.0,  t: 2.5 },
+            { system: "2.7mm System",          name: "Vi 2.7mm Locking (DLP/Stacked)",        w: 8.0,  t: 2.5 },
+            { system: "2.7mm System",          name: "Vi 2.7mm Cuttable",                     w: 6.0,  t: 2.0 },
+            { system: "2.7mm System",          name: "Vi 2.0/2.4/2.7mm VCP",                  w: 7.1,  t: 1.2 },
+            { system: "2.7mm System",          name: "Vi 2.0/2.4/2.7mm VCP Broad",            w: 7.1,  t: 2.0 },
+            { system: "3.5mm System",          name: "Vi 3.5mm Narrow DCP",                   w: 10.5, t: 3.2 },
+            { system: "3.5mm System",          name: "Vi 3.5mm Broad DCP",                    w: 12.0, t: 4.2 },
+            { system: "3.5mm System",          name: "Vi 3.5mm Locking Narrow",               w: 10.5, t: 3.2 },
+            { system: "3.5mm System",          name: "Vi 3.5mm Locking Broad",                w: 12.0, t: 4.2 },
+            { system: "3.5mm System",          name: "Vi 2.7/3.5mm Hybrid T-Plate",           w: 9.5,  t: 2.0 },
+            { system: "4.5mm System",          name: "Vi 4.5mm Narrow DCP",                   w: 14.0, t: 4.6 },
+            { system: "4.5mm System",          name: "Vi 4.5mm Broad DCP",                    w: 16.0, t: 5.2 }
+        ];
+        // Pre-compute geometry and sort by I_p so the slider sweeps stiffness monotonically.
+        const viPlateLibrary = viPlateLibraryRaw
+            .map(p => ({ ...p, A_p: p.w * p.t, I_p: (p.w * Math.pow(p.t, 3)) / 12 }))
+            .sort((a, b) => a.I_p - b.I_p);
+
         const PlateSizeInteractiveGraph = () => {
-            const [ipValue, setIpValue] = useState(25); 
+            // Default: pick the implant whose I_p is closest to the original demo value (~25 mm⁴).
+            const defaultIdx = (() => {
+                let best = 0, bestErr = Infinity;
+                viPlateLibrary.forEach((p, i) => {
+                    const err = Math.abs(p.I_p - 25);
+                    if (err < bestErr) { bestErr = err; best = i; }
+                });
+                return best;
+            })();
+            const [implantIdx, setImplantIdx] = useState(defaultIdx);
             const [material, setMaterial] = useState('Ti');
             const [isDragging, setIsDragging] = useState(false);
             const [showMath, setShowMath] = useState(false);
@@ -572,62 +619,43 @@
             const svgRef = useRef(null);
             
             // Constants
-            const D = 10; 
+            // Bone is modelled as a "medium dog" diaphysis. r_bone is the distance from the bone's
+            // centroidal axis to its outer cortex; the plate sits on that surface so its centroid
+            // lies at (r_bone + t/2) from the bone axis. r_bone = 8.5 mm matches the original
+            // Tab 1 setting (D = 10 mm with a 3 mm thick fixed plate).
+            const r_bone = 8.5;
             const A_b = 150; const I_b = 10000; 
             const Moment = 10000; 
-            const W = 10; 
             
-            const minIp = 1; 
-            const maxIp = 200;
+            const N = viPlateLibrary.length;
+            const minIdx = 0;
+            const maxIdx = N - 1;
             
             const boneE = 18.0;
             const nTi = 114.5 / boneE; 
             const nSteel = 187.5 / boneE; 
             const n = material === 'Ti' ? nTi : nSteel;
 
-            // Physics Functions based on ipValue
-            const getTp = (ip) => Math.pow((ip * 12) / W, 1/3);
-            const getAp = (ip) => W * getTp(ip);
+            // Physics Functions driven by the selected implant.
+            // D is now per-implant: the centroid-to-centroid distance grows with plate thickness.
+            const getD     = (impl) => r_bone + impl.t / 2;
+            const getDPlate = (impl) => (A_b * getD(impl)) / (n * impl.A_p + A_b);
 
-            const getDPlate = (ip) => {
-                const ap = getAp(ip);
-                return (A_b * D) / (n * ap + A_b);
+            const getAMI = (impl) => {
+                const D_i = getD(impl);
+                const dp  = getDPlate(impl);
+                const db  = D_i - dp;
+                return n * (impl.I_p + impl.A_p * Math.pow(dp, 2)) + (I_b + A_b * Math.pow(db, 2));
             };
 
-            const getAMI = (ip) => {
-                const ap = getAp(ip);
-                const dp = getDPlate(ip);
-                const db = D - dp;
-                return n * (ip + ap * Math.pow(dp, 2)) + (I_b + A_b * Math.pow(db, 2));
+            const getStress = (impl) => {
+                const dp = getDPlate(impl);
+                const y  = dp + (impl.t / 2); 
+                return (n * Moment * y) / getAMI(impl);
             };
 
-            const getStress = (ip) => {
-                const dp = getDPlate(ip);
-                const tp = getTp(ip);
-                const y = dp + (tp / 2); 
-                return (n * Moment * y) / getAMI(ip);
-            };
-
-            // Map IP Value to real-world Vi implant profiles
-            const getPlateExample = (ip) => {
-                if (ip <= 2) return "2.0/2.4/2.7 Veterinary Cuttable (1.2mm thick)";
-                if (ip <= 4) return "2.4mm Double Compression Cuttable (1.8mm thick)";
-                if (ip <= 6) return "2.0/2.4/2.7 VCP Broad (2.0mm thick)";
-                if (ip <= 15) return "2.7mm Dynamic Compression Plate (DCP)";
-                if (ip <= 35) return "3.5mm Narrow Dynamic Compression Plate (DCP)";
-                if (ip <= 90) return "3.5mm Broad / 4.5mm Narrow DCP";
-                return "4.5mm Broad Compression Plate (5.0mm thick)";
-            };
-
-            const getShortPlateExample = (ip) => {
-                if (ip <= 2) return "1.2mm Cuttable";
-                if (ip <= 4) return "1.8mm Dbl Cuttable";
-                if (ip <= 6) return "2.0mm VCP Broad";
-                if (ip <= 15) return "2.7mm DCP";
-                if (ip <= 35) return "3.5mm Narrow DCP";
-                if (ip <= 90) return "3.5mm Broad DCP";
-                return "4.5mm Broad Compression Plate (5.0mm thick)";
-            };
+            const getPlateExample      = (impl) => impl.name + ` (${impl.w.toFixed(1)}mm wide × ${impl.t.toFixed(1)}mm thick)`;
+            const getShortPlateExample = (impl) => impl.name.replace(/^Vi /, "");
 
             // Interactive Drag Handlers
             const handlePointerDown = (e, ref, isSvgContext) => {
@@ -664,33 +692,40 @@
                     if (percent > 1) percent = 1;
                 }
 
-                let newIp = minIp + (maxIp - minIp) * percent; 
-                setIpValue(Math.round(newIp));
+                const newIdx = Math.round(minIdx + (maxIdx - minIdx) * percent);
+                setImplantIdx(Math.max(minIdx, Math.min(maxIdx, newIdx)));
             };
 
             // Pre-calculate path data and dynamically scale Y-axes
-            const pointsData = [];
-            for (let ip = minIp; ip <= maxIp; ip += 2) {
-                pointsData.push({ ip, ami: getAMI(ip), stress: getStress(ip) });
-            }
+            const pointsData = viPlateLibrary.map((impl, i) => ({
+                idx: i,
+                impl,
+                ip: impl.I_p,
+                ami: getAMI(impl),
+                stress: getStress(impl)
+            }));
 
-            const amiBounds = getDynamicBounds(Math.min(...pointsData.map(p => p.ami)), Math.max(...pointsData.map(p => p.ami)));
+            const amiBounds    = getDynamicBounds(Math.min(...pointsData.map(p => p.ami)),    Math.max(...pointsData.map(p => p.ami)));
             const stressBounds = getDynamicBounds(Math.min(...pointsData.map(p => p.stress)), Math.max(...pointsData.map(p => p.stress)));
 
-            // SVG Mapping
-            const mapX = (ip) => 50 + ((ip - minIp) / (maxIp - minIp)) * 400; 
-            const mapAMI_Y = (ami) => 460 - ((ami - amiBounds.lower) / (amiBounds.upper - amiBounds.lower)) * 150; 
+            // SVG Mapping (X axis is now implant index, not raw I_p, so plates are evenly spaced)
+            const mapX        = (idx)    => 50 + ((idx - minIdx) / (maxIdx - minIdx)) * 400; 
+            const mapAMI_Y    = (ami)    => 460 - ((ami - amiBounds.lower) / (amiBounds.upper - amiBounds.lower)) * 150; 
             const mapStress_Y = (stress) => 740 - ((stress - stressBounds.lower) / (stressBounds.upper - stressBounds.lower)) * 150; 
 
-            const pathAMI = pointsData.map(p => `${mapX(p.ip)},${mapAMI_Y(p.ami)}`).join(" L ");
-            const pathStress = pointsData.map(p => `${mapX(p.ip)},${mapStress_Y(p.stress)}`).join(" L ");
+            const pathAMI    = pointsData.map(p => `${mapX(p.idx)},${mapAMI_Y(p.ami)}`).join(" L ");
+            const pathStress = pointsData.map(p => `${mapX(p.idx)},${mapStress_Y(p.stress)}`).join(" L ");
 
-            const currentDp = getDPlate(ipValue);
-            const currentDb = D - currentDp;
-            const currentAMI = getAMI(ipValue);
-            const currentStress = getStress(ipValue);
-            const currentTp = getTp(ipValue);
-            const currentAp = getAp(ipValue);
+            const currentImplant = viPlateLibrary[implantIdx];
+            const ipValue        = currentImplant.I_p;
+            const W              = currentImplant.w;
+            const currentTp      = currentImplant.t;
+            const currentAp      = currentImplant.A_p;
+            const D              = getD(currentImplant);
+            const currentDp      = getDPlate(currentImplant);
+            const currentDb      = D - currentDp;
+            const currentAMI     = getAMI(currentImplant);
+            const currentStress  = getStress(currentImplant);
             
             const crossSectionX_dp = 50 + (currentDp / D) * 400;
 
@@ -718,16 +753,16 @@
                         </button>
                     </div>
                     {showParams && <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
-                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Plate Geometry</strong> Width = {W} mm<br/>Thickness = {currentTp.toFixed(1)} mm<br/>A_p = {currentAp.toFixed(1)} mm²</div>
-                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Bone Geometry</strong> A_b = {A_b} mm²<br/>I_b = {formatNum(I_b)} mm⁴</div>
-                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">System Parameters</strong> Moment (M) = 10,000 N·mm<br/>Total Dist (D) = {D} mm</div>
+                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Plate Geometry</strong> Width = {W.toFixed(1)} mm<br/>Thickness = {currentTp.toFixed(1)} mm<br/>A_p = {currentAp.toFixed(1)} mm²<br/>I_p = {formatNum(ipValue)} mm⁴</div>
+                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Bone Geometry</strong> A_b = {A_b} mm²<br/>I_b = {formatNum(I_b)} mm⁴<br/>r_bone ≈ {r_bone.toFixed(1)} mm</div>
+                        <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">System Parameters</strong> Moment (M) = 10,000 N·mm<br/>Total Dist (D) = {D.toFixed(2)} mm<br/><span className="text-[10px] text-slate-500">D = r_bone + t/2 (per implant)</span></div>
                         <div><strong className="block text-slate-800 dark:text-slate-100 mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">Fixed Material</strong> <span className="text-[10px]">n = E_implant / E_bone</span><br/>Ti Alloy (114.5) → n ≈ {nTi.toFixed(1)}<br/>Steel (187.5) → n ≈ {nSteel.toFixed(1)}</div>
                     </div>}
 
                     <div className="mb-4 border-b border-slate-200 dark:border-slate-700 pb-8">
                         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                             <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                                Set Plate AMI (<Latex math={'I_p'} />)
+                                Select Implant (Vi catalogue)
                             </label>
                             <div className="flex space-x-2">
                                 <button onClick={() => setMaterial('Ti')} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm border ${material === 'Ti' ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
@@ -750,12 +785,12 @@
                                 onPointerCancel={handlePointerUp}
                             >
                                 <div className="w-full h-2.5 bg-slate-300 dark:bg-slate-700 rounded-full shadow-inner relative overflow-hidden pointer-events-none">
-                                    <div className="absolute top-0 left-0 h-full bg-blue-500" style={{ width: `${((ipValue - minIp) / (maxIp - minIp)) * 100}%` }}></div>
+                                    <div className="absolute top-0 left-0 h-full bg-blue-500" style={{ width: `${((implantIdx - minIdx) / (maxIdx - minIdx)) * 100}%` }}></div>
                                 </div>
                                 <div 
                                     className="absolute h-6 w-6 bg-amber-500 rounded-full border-[3px] border-white shadow-md pointer-events-none flex items-center justify-center"
                                     style={{ 
-                                        left: `calc(${((ipValue - minIp) / (maxIp - minIp)) * 100}% - 12px)`,
+                                        left: `calc(${((implantIdx - minIdx) / (maxIdx - minIdx)) * 100}% - 12px)`,
                                         transform: isDragging ? 'scale(1.2)' : 'scale(1)',
                                         transition: isDragging ? 'none' : 'transform 0.15s ease-out'
                                     }}
@@ -764,8 +799,8 @@
                                 </div>
                             </div>
                             <div className="w-full flex justify-between text-[10px] font-bold text-slate-400 px-1 mt-1">
-                                <span>Thin Plate (I_p = {minIp})</span>
-                                <span>Thick Plate (I_p = {maxIp})</span>
+                                <span>Smallest plate ({viPlateLibrary[minIdx].name})</span>
+                                <span>Largest plate ({viPlateLibrary[maxIdx].name})</span>
                             </div>
                         </div>
 
@@ -773,10 +808,10 @@
                         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl flex flex-col md:flex-row items-center justify-between gap-3 fade-in">
                             <div className="flex items-center gap-2">
                                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 font-bold text-xs">i</span>
-                                <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Equivalent Vi Plate Profile for <Latex math={`I_p \\approx ${ipValue}`} />:</span>
+                                <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Selected Vi Plate (<Latex math={`I_p \\approx ${formatNum(ipValue)}`} /> mm⁴, D = {D.toFixed(2)} mm):</span>
                             </div>
                             <span className="text-xs font-mono font-bold bg-white dark:bg-slate-800 px-3 py-1.5 rounded shadow-sm text-blue-700 dark:text-blue-400 text-center w-full md:w-auto">
-                                {getPlateExample(ipValue)}
+                                {getPlateExample(currentImplant)}
                             </span>
                         </div>
                     </div>
@@ -794,8 +829,8 @@
                             
                             <text x="25" y="30" className="fill-slate-800 dark:fill-slate-100 font-bold text-sm">Physical Cross-Section (Growing Geometry)</text>
                             
-                            {/* Plate visually grows in thickness */}
-                            <rect x={50 - (currentTp * 5)/2} y="50" width={currentTp * 5} height="60" rx="3" className={`stroke-2 transition-all duration-75 ${material === 'Ti' ? 'fill-emerald-100 stroke-emerald-500 dark:fill-emerald-900/50' : 'fill-rose-100 stroke-rose-500 dark:fill-rose-900/50'}`} />
+                            {/* Plate visually grows in both width (rect height in SVG) and thickness (rect width in SVG) */}
+                            <rect x={50 - (currentTp * 5)/2} y={80 - (W * 4)/2} width={currentTp * 5} height={W * 4} rx="3" className={`stroke-2 transition-all duration-75 ${material === 'Ti' ? 'fill-emerald-100 stroke-emerald-500 dark:fill-emerald-900/50' : 'fill-rose-100 stroke-rose-500 dark:fill-rose-900/50'}`} />
                             <text x="50" y="130" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Plate Axis</text>
                             <line x1="50" y1="40" x2="50" y2="150" className="stroke-slate-300 dark:stroke-slate-600 stroke-dasharray-4 stroke-2" />
 
@@ -805,7 +840,7 @@
                             <line x1="450" y1="40" x2="450" y2="150" className="stroke-slate-300 dark:stroke-slate-600 stroke-dasharray-4 stroke-2" />
 
                             <line x1="50" y1="150" x2="450" y2="150" className="stroke-slate-300 dark:stroke-slate-700 stroke-1" />
-                            <text x="250" y="165" className="fill-slate-400 dark:fill-slate-500 text-[8px] font-bold" textAnchor="middle">Constraint: d_plate + d_bone = Constant Distance ({D}mm)</text>
+                            <text x="250" y="165" className="fill-slate-400 dark:fill-slate-500 text-[8px] font-bold" textAnchor="middle">Constraint: d_plate + d_bone = D = {D.toFixed(2)} mm (per implant: r_bone + t/2)</text>
 
                             <g className="transition-all duration-75 pointer-events-none">
                                 <line x1={crossSectionX_dp} y1="40" x2={crossSectionX_dp} y2="150" className="stroke-amber-500 stroke-2" />
@@ -834,17 +869,17 @@
                             <text x="35" y="385" className="fill-blue-600 dark:fill-blue-400 text-[8px] font-bold uppercase tracking-widest" transform="rotate(-90 35 385)" textAnchor="middle">Composite AMI (mm⁴)</text>
                             
                             <line x1="50" y1="460" x2="450" y2="460" className="stroke-slate-400 stroke-2" />
-                            <text x="250" y="475" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Plate AMI, I_p (mm⁴)</text>
+                            <text x="250" y="475" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Implant (small → large by I_p)</text>
 
                             <path d={`M ${pathAMI}`} fill="none" className="stroke-blue-500 stroke-[3px]" />
 
                             {/* Banner & Dot Tooltip for Graph 1 */}
-                            <g transform={`translate(${mapX(ipValue)}, 0)`} className="transition-all duration-75 pointer-events-none">
+                            <g transform={`translate(${mapX(implantIdx)}, 0)`} className="transition-all duration-75 pointer-events-none">
                                 <line x1="0" y1="310" x2="0" y2="460" className="stroke-amber-500 dark:stroke-amber-500 stroke-[2px] stroke-dasharray-4 opacity-80" />
                                 <g transform="translate(-45, 282)">
                                     <rect x="0" y="0" width="90" height="26" rx="3" className="fill-amber-100 dark:fill-amber-900/90 border border-amber-400 dark:border-amber-600 shadow-sm" />
                                     <text x="45" y="11" className="fill-amber-800 dark:fill-amber-200 text-[8px] font-bold" textAnchor="middle">I_p = {formatNum(ipValue)} mm⁴</text>
-                                    <text x="45" y="21" className="fill-amber-700 dark:fill-amber-300 text-[7px] font-medium" textAnchor="middle">{getShortPlateExample(ipValue)}</text>
+                                    <text x="45" y="21" className="fill-amber-700 dark:fill-amber-300 text-[7px] font-medium" textAnchor="middle">{getShortPlateExample(currentImplant)}</text>
                                 </g>
                                 <g transform={`translate(0, ${mapAMI_Y(currentAMI)})`}>
                                     <circle cx="0" cy="0" r="5" className="fill-blue-600 dark:fill-blue-400 stroke-white stroke-2 shadow-lg" />
@@ -872,17 +907,17 @@
                             <text x="35" y="665" className="fill-rose-600 dark:fill-rose-400 text-[8px] font-bold uppercase tracking-widest" transform="rotate(-90 35 665)" textAnchor="middle">Plate Stress (MPa = N/mm²)</text>
                             
                             <line x1="50" y1="740" x2="450" y2="740" className="stroke-slate-400 stroke-2" />
-                            <text x="250" y="755" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Plate AMI, I_p (mm⁴)</text>
+                            <text x="250" y="755" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Implant (small → large by I_p)</text>
 
                             <path d={`M ${pathStress}`} fill="none" className="stroke-rose-500 stroke-[3px]" />
 
                             {/* Banner & Dot Tooltip for Graph 2 */}
-                            <g transform={`translate(${mapX(ipValue)}, 0)`} className="transition-all duration-75 pointer-events-none">
+                            <g transform={`translate(${mapX(implantIdx)}, 0)`} className="transition-all duration-75 pointer-events-none">
                                 <line x1="0" y1="590" x2="0" y2="740" className="stroke-amber-500 dark:stroke-amber-500 stroke-[2px] stroke-dasharray-4 opacity-80" />
                                 <g transform="translate(-45, 562)">
                                     <rect x="0" y="0" width="90" height="26" rx="3" className="fill-amber-100 dark:fill-amber-900/90 border border-amber-400 dark:border-amber-600 shadow-sm" />
                                     <text x="45" y="11" className="fill-amber-800 dark:fill-amber-200 text-[8px] font-bold" textAnchor="middle">I_p = {formatNum(ipValue)} mm⁴</text>
-                                    <text x="45" y="21" className="fill-amber-700 dark:fill-amber-300 text-[7px] font-medium" textAnchor="middle">{getShortPlateExample(ipValue)}</text>
+                                    <text x="45" y="21" className="fill-amber-700 dark:fill-amber-300 text-[7px] font-medium" textAnchor="middle">{getShortPlateExample(currentImplant)}</text>
                                 </g>
                                 <g transform={`translate(0, ${mapStress_Y(currentStress)})`}>
                                     <circle cx="0" cy="0" r="5" className="fill-rose-600 dark:fill-rose-400 stroke-white stroke-2 shadow-lg" />
@@ -1709,9 +1744,9 @@
                                 </p>
                             </div>
                             <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <strong className="text-slate-700 dark:text-slate-300 text-sm block mb-1">The "Diminishing Returns" Illusion</strong>
+                                <strong className="text-slate-700 dark:text-slate-300 text-sm block mb-1">Steady Returns, Falling Rate</strong>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    You might assume that because Plate AMI grows cubically with thickness (<Latex math="t^3" />), it should easily overpower the linear growth of <Latex math="y" />. But look closely at the live formula! As the plate gets thicker, it pulls the neutral axis towards itself. <strong className="text-rose-500">Paradoxically, the Plate's total contribution term actually decreases</strong> because its lever arm (<Latex math="d_{plate}" />) shrinks! However, the axis moving away from the bone causes the <em>Bone's</em> term to skyrocket. Even so, a massive increase in <Latex math="I_p" /> only bumps the Total Composite AMI by ~20%. Since the denominator barely grows, the growing <Latex math="y" /> numerator causes the stress drop to flatten out.
+                                    You might assume that because Plate AMI grows cubically with thickness (<Latex math="t^3" />), it should easily overpower the linear growth of <Latex math="y" />. Look closely at the live formula! As the plate gets thicker, it pulls the neutral axis towards itself, so the Plate's lever arm (<Latex math="d_{plate}" />) shrinks while the Bone's lever arm (<Latex math="d_{bone}" />) grows — and the bone term <Latex math="A_b \cdot d_{bone}^2" /> rises sharply. Across the full Vi catalogue (2.7 → 4.5 Broad), the Total Composite AMI grows by roughly <strong>~54%</strong>, and the stress curve falls almost linearly with each upsize step — a meaningful drop per step rather than a true plateau. The <em>rate per unit <Latex math="I_p" /></em> does fall steeply, but the <em>absolute</em> stress reduction at each successive size step does not flatten.
                                 </p>
                             </div>
                         </div>
@@ -1781,7 +1816,7 @@
                         </div>
 
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                            By calculating the mathematical rates of change across the curves, we can objectively answer: <em>Which brings the biggest stress reduction—Material, Span, or Geometry? And at what point is up-sizing the plate no longer worth it?</em>
+                            By calculating the mathematical rates of change across the curves, we can objectively compare the three levers — <em>Material, Span, and Geometry</em> — and weigh each against its clinical cost: added physical bulk, soft-tissue burden, and <strong>stress-shielding of the underlying bone</strong>.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1795,7 +1830,7 @@
                                     <span className="text-xs font-bold">Δ -4.1 MPa Total</span>
                                 </div>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Switching to Titanium grants a mathematically safe reduction in plate stress <em>without adding a single millimetre of physical bulk</em>. This is invaluable when soft-tissue coverage is poor.
+                                    <strong>Conclusion:</strong> Switching to Titanium grants a meaningful reduction in plate stress <em>without adding a single millimetre of physical bulk and without increasing stress-shielding of the underlying bone</em>. This is invaluable when soft-tissue coverage is poor or when up-sizing is mechanically unwise (e.g. small bone diameter). It is, however, no longer the single largest lever — a single up-size step can deliver a comparable or greater drop (see Card 3).
                                 </p>
                             </div>
 
@@ -1815,7 +1850,7 @@
 
                             {/* GEOMETRY CARD (Full Width) */}
                             <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-800/50 md:col-span-2 flex flex-col">
-                                <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Diminishing Returns)</strong>
+                                <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Steady, Substantial Returns)</strong>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mb-2 border-l-2 border-blue-300 dark:border-blue-700 pl-2">
                                     *Note: Evaluated across the unconstrained composite curve (Section 4). Micro-plates excluded.
                                 </p>
@@ -1825,19 +1860,19 @@
                                 <ul className="space-y-2 text-[10px] font-mono text-slate-700 dark:text-slate-300 mb-4 bg-white dark:bg-slate-800 p-3 rounded border border-blue-200 dark:border-blue-700 shadow-sm">
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
                                         <span>2.7mm → 3.5 Nar:</span> 
-                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -2.2 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.11 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -5.9 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.32 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 pt-2">
                                         <span>3.5 Nar → 3.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -1.6 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.07 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center pt-2">
                                         <span>3.5 Brd → 4.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -0.7 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.007 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
                                     </li>
                                 </ul>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Up-sizing from a 2.7 to a 3.5 Narrow yields a meaningful 2.2 MPa reduction. Up-sizing further offers sharply diminishing returns. Going all the way to a massive 4.5mm plate barely moves the needle (only a 0.7 MPa drop) because the geometric axis shift entirely neutralises the newly added steel.
+                                    <strong>Conclusion:</strong> Each up-size step buys a clinically meaningful drop in plate stress — ~5.9 MPa for 2.7 → 3.5 Narrow, and ~3.3 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.3 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective.
                                 </p>
                             </div>
                         </div>
@@ -2359,6 +2394,9 @@
                                 <h2 className="text-lg font-extrabold text-amber-700 dark:text-amber-400">Independent Expert Reviews</h2>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed italic max-w-2xl">
                                     The following reviews were independently produced by two AI language models — <strong className="not-italic text-slate-600 dark:text-slate-300">Gemini 3.1</strong> and <strong className="not-italic text-slate-600 dark:text-slate-300">Claude Sonnet 4.6</strong> — after each model rigorously audited all mathematical models, logic, and clinical claims within this application. No human editorial changes were made to either review.
+                                </p>
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 leading-relaxed not-italic max-w-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-md px-2 py-1.5">
+                                    <strong>Editor's note:</strong> Both reviews were generated <em>before</em> the Tab&nbsp;2 plate-width correction (real plate width <Latex math="w" /> from the Vi catalogue, with <Latex math="D = r_{bone} + t/2" />). After that fix, each up-size step now delivers an absolute stress drop comparable to — or greater than — the Steel→Ti material swap. Statements in the reviews about "diminishing returns" from increasing plate thickness, or about material choice "dominating geometry", therefore no longer reflect the current model.
                                 </p>
                             </div>
                         </div>
