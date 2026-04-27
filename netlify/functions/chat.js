@@ -17,6 +17,20 @@ try {
     appKnowledge = '(Knowledge file failed to load — please contact the app maintainer.)';
 }
 
+// ============================================================
+// LOAD LITERATURE LIBRARY FROM EXTERNAL MARKDOWN FILE
+// This is the ONLY source of manuscripts the bot is allowed to
+// cite as if it had read them. Loaded once at cold-start.
+// ============================================================
+let appLiterature = '';
+try {
+    const literaturePath = path.join(__dirname, 'literature.md');
+    appLiterature = fs.readFileSync(literaturePath, 'utf-8');
+} catch (err) {
+    console.error('Could not load literature.md:', err);
+    appLiterature = '(Literature library failed to load — treat the curated library as empty for this session.)';
+}
+
 exports.handler = async function(event, context) {
     if (event.httpMethod !== "POST") {
         return { statusCode: 405, body: "Method Not Allowed" };
@@ -39,6 +53,10 @@ exports.handler = async function(event, context) {
 ${appKnowledge}
 </app_documentation>
 
+<app_literature>
+${appLiterature}
+</app_literature>
+
 HOW YOU MUST ANSWER (this is the most important instruction):
 
 Your answers must be DERIVED from the formulas and models in <app_documentation> — not from your general training intuition. General engineering intuition (e.g. "stiffer is stronger", "more rigid means lower stress") is frequently WRONG inside this app's models, because the app deliberately teaches counter-intuitive composite behaviour. When your intuition disagrees with what the formulas predict, the formulas win.
@@ -55,11 +73,38 @@ For every substantive question, internally walk through these steps before writi
 
 5. CHECK FOR REGIME-DEPENDENT ANSWERS. Some parameters (working length, material choice) have opposite effects in different models. If the user hasn't specified the clinical scenario, briefly cover both — closed-gap vs bridging — rather than picking one.
 
+LITERATURE PROTOCOL — read carefully, this governs every answer that touches on references, evidence, manuscripts, papers, citations, or "is there a study that…" type questions:
+
+A. The ONLY manuscripts you are allowed to present as if you have read them are those listed in <app_literature>. Treat that block as your full personal library. Do not invent DOIs, authors, journals, sample sizes, or numerical results for any paper. Entries inside <app_literature> that are explicitly marked PLACEHOLDER are not real and must be ignored — if the library contains only placeholders, treat the curated library as empty.
+
+B. Before naming a single paper, do this internal pre-flight (do it silently — do not show this scratchpad to the user):
+   1. Reconstruct the SCENARIO CONTEXT from the conversation so far. Write down for yourself, in plain terms:
+        - Which model is in play (Composite AMI / Parallel Spring / P-Delta)?
+        - Gap state being discussed (closed-gap vs bridging; if bridging, what gap size?)
+        - Loading mode being discussed (axial compression / four-point bending / torsion / cyclic fatigue / combined)
+        - Working length, plate material, screw configuration if specified
+   2. For EACH entry in <app_literature>, line up its loading conditions and construct conditions next to the scenario context above and classify it as one of:
+        - DIRECT MATCH — same gap state AND same loading mode.
+        - PARTIAL MATCH — same gap state OR same loading mode (but not both).
+        - TANGENTIAL — different scenario but the paper speaks to a related concept (e.g. same model, same parameter trend) that is genuinely useful to the user.
+        - NOT RELEVANT — drop it.
+      Treat any 'unknown' field in an entry as "cannot confirm match" rather than as agreement.
+   3. Only after this classification do you start writing the user-facing reply.
+
+C. When you present the references in your answer:
+   1. Direct matches FIRST, then partial matches, then tangential. Within each tier, lead with the most informative entry.
+   2. For every non-direct match you must EXPLICITLY state the discrepancy in one short clause. Example wording: "Bonyun et al. tested four-point bending on a closed-gap construct; you are discussing axial loading on a bridging construct, so the absolute stress values do not transfer, but the trend in working-length sensitivity is informative."
+   3. If <app_literature> contains nothing that matches the discussed scenario — even partially — say so plainly ("The curated library does not contain a study with these loading conditions"). Do not paper over the gap with a hallucinated reference. You may still offer a tangential entry if and only if you flag it as such.
+
+D. The **From the app** section may only cite papers from <app_literature>. Anything you recall from your general training stays inside **Broader context** and must be flagged as such (e.g. "Beyond the curated library, the wider literature also reports…"). Never blur the two.
+
 ANSWER STRUCTURE — use on every substantive question:
 
 **From the app:** State which model applies and why, then walk through the formula-based reasoning to reach the answer. Cite the relevant tab and concept (e.g. "Tab 1, Concept 5 — Parallel Spring"). If the app does not cover the question, say so plainly here.
 
 **Broader context:** Add a short second section drawing on wider biomechanics and orthopaedic literature — clinical caveats, alternative considerations, related work. Make clear this is your general knowledge, not from the app.
+
+**Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. Omit the section entirely on questions where references were not requested.
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
@@ -96,7 +141,21 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             }
         ];
 
-        async function callClaude(messageHistory) {
+        async function callClaude(messageHistory, { thinking } = {}) {
+            // Extended thinking, when enabled, requires max_tokens > budget_tokens.
+            // Non-trivial turns get a generous budget so the bot can run the
+            // LITERATURE PROTOCOL pre-flight (scenario reconstruction +
+            // per-entry classification) before drafting the user-facing reply.
+            const body = {
+                model: "claude-opus-4-7",
+                max_tokens: thinking ? 8000 : 1024,
+                system: systemPrompt,
+                tools: tools,
+                messages: messageHistory
+            };
+            if (thinking) {
+                body.thinking = { type: "enabled", budget_tokens: 4000 };
+            }
             const res = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -104,13 +163,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     "x-api-key": apiKey,
                     "anthropic-version": "2023-06-01"
                 },
-                body: JSON.stringify({
-                    model: "claude-opus-4-7",
-                    max_tokens: 1024,
-                    system: systemPrompt,
-                    tools: tools,
-                    messages: messageHistory
-                })
+                body: JSON.stringify(body)
             });
             const json = await res.json();
             if (!res.ok) {
@@ -120,7 +173,48 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return json;
         }
 
-        let data = await callClaude(messages);
+        // ============================================================
+        // Decide whether this turn warrants extended thinking. Trivial
+        // turns (greetings, thanks, one-word acks) skip it to keep
+        // latency and cost down; everything else gets the deeper budget
+        // so the LITERATURE PROTOCOL has room to run.
+        //
+        // Bias: when in doubt, ENABLE thinking. A wasted thinking
+        // budget on a chatty acknowledgement is far cheaper than a
+        // shallow answer on a real biomechanics question.
+        // ============================================================
+        function lastUserText(history) {
+            for (let i = history.length - 1; i >= 0; i--) {
+                const m = history[i];
+                if (m.role !== "user") continue;
+                if (typeof m.content === "string") return m.content;
+                if (Array.isArray(m.content)) {
+                    // Skip tool_result-only turns; we want the user's actual prose.
+                    const textBlock = m.content.find(b => b.type === "text" && typeof b.text === "string");
+                    if (textBlock) return textBlock.text;
+                }
+            }
+            return "";
+        }
+
+        // A message is treated as trivial only if BOTH:
+        //  (a) it is short (no real question can be asked in this many chars), AND
+        //  (b) it starts with a known greeting/ack token and contains no
+        //      question mark or technical signal.
+        // Anything else falls through to extended thinking.
+        const TRIVIAL_MAX_CHARS = 60;
+        const TRIVIAL_PREFIX = /^(hi|hello|hey|thanks?|thank you|ty|ok|okay|got it|cool|great|sure|yes|yeah|yep|no|nope|nice|perfect|awesome)\b/i;
+        const TECHNICAL_SIGNAL = /\?|\bmodel\b|\bplate\b|\bbone\b|\bgap\b|\bbridg|\bclosed\b|\bworking length\b|\baxial\b|\btorsion\b|\bbending\b|\bstress\b|\bstiffness\b|\bscrew\b|\bliterature\b|\bpaper\b|\breference\b|\bcitation\b/i;
+
+        const lastUser = lastUserText(messages).trim();
+        const looksTrivial =
+            lastUser.length > 0 &&
+            lastUser.length <= TRIVIAL_MAX_CHARS &&
+            TRIVIAL_PREFIX.test(lastUser) &&
+            !TECHNICAL_SIGNAL.test(lastUser);
+        const useThinking = !looksTrivial;
+
+        let data = await callClaude(messages, { thinking: useThinking });
 
         // Tool execution loop
         if (data.stop_reason === "tool_use") {
@@ -161,7 +255,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 }
             ];
 
-            data = await callClaude(followUpMessages);
+            data = await callClaude(followUpMessages, { thinking: useThinking });
         }
 
         const replyText = (data.content || [])
