@@ -96,27 +96,25 @@ C. When you present the references in your answer:
    2. For every non-direct match you must EXPLICITLY state the discrepancy in one short clause. Example wording: "Bonyun et al. tested four-point bending on a closed-gap construct; you are discussing axial loading on a bridging construct, so the absolute stress values do not transfer, but the trend in working-length sensitivity is informative."
    3. If <app_literature> contains nothing that matches the discussed scenario — even partially — say so plainly ("The curated library does not contain a study with these loading conditions"). Do not paper over the gap with a hallucinated reference. You may still offer a tangential entry if and only if you flag it as such.
 
-D. The **From the app** section may only cite papers from <app_literature>. Anything you recall from your general training stays inside **Broader context** and must be flagged as such (e.g. "Beyond the curated library, the wider literature also reports…"). Never blur the two.
+D. The **From the app** section may only cite papers from <app_literature>. Anything you recall from your general training, OR anything drawn from a live PubMed hit, stays inside **Broader context** and must be flagged as such (e.g. "Beyond the curated library, the wider literature also reports…"). Never blur the two.
 
-E. LIVE PUBMED LOOKUPS. You have a tool called \`search_pubmed\` that queries the live PubMed database (NCBI E-utilities). Results from that tool are NOT part of your curated library and you have NOT personally read them — they are bibliographic hits only.
-   1. Call \`search_pubmed\` when EITHER:
-        - the curated <app_literature> contains no direct or partial match for the scenario the user is asking about, OR
-        - the user explicitly asks for "current literature", "recent papers", "PubMed", "what's out there", "latest evidence", or similar.
-      You may also call it when the user asks a focused evidence question that the library plainly does not cover, even without the keywords above.
-   2. Build a focused query — combine the construct (e.g. "locking plate", "bridge plating"), the scenario (e.g. "working length", "bridging osteosynthesis", "fatigue"), and the loading mode (e.g. "axial", "four-point bending", "torsion"). Keep it short; PubMed prefers concise terms.
-   3. Present PubMed results in a separate **PubMed (live):** section (see ANSWER STRUCTURE). For each hit list: title, first author + "et al.", journal, year, PMID, DOI (if present), and the URL. Add one short sentence noting it is a live database hit that has not been read by the app and whose relevance to the scenario should be confirmed by the surgeon.
-   4. NEVER move PubMed hits into **Literature:** (which is curated-only) or cite them inside **From the app:**. The provenance must remain visibly distinct.
-   5. If the tool returns zero results or errors, say so plainly; do not fabricate replacement records.
+E. LIVE PUBMED LOOKUPS. The chat backend automatically runs a focused PubMed search (NCBI E-utilities) for **every substantive turn** and injects the results into your prompt as a \`<prefetched_pubmed_results>\` block. PubMed hits are bibliographic records only — you have NOT read those papers in full, so do not fabricate methods, sample sizes, or numerical results from them.
+   1. You ALWAYS have access to the injected \`<prefetched_pubmed_results>\` (when present) and you must consult them on every substantive turn — they are part of the evidence base that grounds your **Broader context** section, alongside the curated <app_literature>. Use them silently as grounding even when the user did not ask for citations.
+   2. Build any additional searches via the \`search_pubmed\` tool only if the injected pre-fetch is empty/missing or clearly off-topic for the user's question. Otherwise do not call the tool — the pre-fetch already covers this turn.
+   3. Whether to RENDER the citation lists (**Literature:** and **PubMed (live):** sections) is a separate decision — see ANSWER STRUCTURE below. The default is to consult the literature silently and NOT show the citation lists. Show the lists only when the user has asked for references / evidence / citations / "what does the literature say" / "any studies on…" or similar.
+   4. When you do render **PubMed (live):**, list each hit as: title, first author + "et al.", journal, year, PMID, DOI (if present), URL — with one short sentence noting it is a live database hit that has not been read by the app and whose relevance the surgeon should confirm.
+   5. NEVER move PubMed hits into **Literature:** (curated-only) or cite them inside **From the app:**. The provenance must remain visibly distinct.
+   6. If the pre-fetched PubMed block is empty or errored AND the user asked for references, say so plainly; do not fabricate replacement records.
 
 ANSWER STRUCTURE — use on every substantive question:
 
 **From the app:** State which model applies and why, then walk through the formula-based reasoning to reach the answer. Cite the relevant tab and concept (e.g. "Tab 1, Concept 5 — Parallel Spring"). If the app does not cover the question, say so plainly here.
 
-**Broader context:** Add a short second section drawing on wider biomechanics and orthopaedic literature — clinical caveats, alternative considerations, related work. Make clear this is your general knowledge, not from the app.
+**Broader context:** Add a short second section that places the app's answer in the wider biomechanics / orthopaedic evidence base — clinical caveats, alternative considerations, related work. This section MUST be grounded in (a) the curated <app_literature> entries that match the scenario and (b) the injected \`<prefetched_pubmed_results>\` for this turn — not in unsupported recall. You may paraphrase findings from the curated library and refer to PubMed-hit titles/authors generically (e.g. "a recent PubMed hit by X et al. on bridge plating in torsion"); reserve the formal citation list for the **Literature:** / **PubMed (live):** sections below. Make clear when a statement is your general background knowledge rather than something supported by either source.
 
 **Literature:** Include this section ONLY when the user has asked for references, evidence, citations, or supporting manuscripts (or when you are otherwise volunteering specific papers from <app_literature>). Format as a short list, ordered direct → partial → tangential, with the discrepancy clause attached to every non-direct entry. This section is curated-library-only — never include PubMed hits here. Omit the section entirely on questions where references were not requested.
 
-**PubMed (live):** Include this section ONLY when you have called \`search_pubmed\` on this turn. Format as a short list of database hits (title, first author et al., journal, year, PMID, DOI if any, URL), each with a one-line note that it is a live PubMed result, not a paper from the curated library, and that the surgeon should verify relevance. Omit the section entirely if you did not call the tool.
+**PubMed (live):** Include this section ONLY when the user has asked for references / evidence / current literature / PubMed / "what does the literature say" / "any studies on…" or similar. When included, format as a short list of database hits (title, first author et al., journal, year, PMID, DOI if any, URL), each with a one-line note that it is a live PubMed result, not a paper from the curated library, and that the surgeon should verify relevance. Omit the section entirely on turns where the user did not ask for references — even if a pre-fetched PubMed block is present in the prompt (you used it silently to ground **Broader context**).
 
 For trivial messages (greetings, thanks, one-word clarifications), skip the structure and reply naturally in 1-2 sentences.
 
@@ -289,14 +287,12 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // `thinking: { type: "enabled", budget_tokens: N }` contract with
             // `thinking: { type: "adaptive" }` plus `output_config.effort`.
             // `effort` is a CEILING on adaptive thinking depth — Claude still
-            // scales up on its own when the prompt warrants it. We therefore
-            // reserve the expensive "high" tier for the literature pre-flight
-            // (which has to run the multi-step LITERATURE PROTOCOL classifier
-            // across every entry in <app_literature>), and let everything
-            // else run at "low". On a substantive non-literature turn — e.g.
-            // "is it better to change material or upsize the plate?" — high
-            // effort blew past Netlify's 26 s function limit and surfaced as
-            // a generic "Network error" in the UI.
+            // scales up on its own when the prompt warrants it. We pin it to
+            // "low" here because the system prompt is large (app knowledge +
+            // literature library + injected PubMed JSON on every substantive
+            // turn) and "high" pushes total latency past Netlify's 26 s
+            // function limit, surfacing as either a "Network error" toast or
+            // a reply truncated mid-sentence in the chat UI.
             const effortLevel = effort === "high" ? "high" : "low";
             const body = {
                 model: "claude-opus-4-7",
@@ -339,18 +335,10 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         }
 
         // ============================================================
-        // Decide whether this turn warrants the expensive "high" effort
-        // tier. We only spend it when the literature pre-flight is
-        // running (see the LITERATURE PROTOCOL in the system prompt) —
-        // that's the path that has to walk every entry in
-        // <app_literature> against the scenario context.
-        //
-        // Trivial turns (greetings, thanks, one-word acks) and ordinary
-        // substantive biomechanics turns both run at "low". Adaptive
-        // thinking still scales internally when the prompt warrants it,
-        // and "low" comfortably finishes inside Netlify's 26 s function
-        // limit — "high" did not, and surfaced as a generic
-        // "Network error" in the chat UI.
+        // Pull the user's latest prose. Used below to decide whether
+        // this turn is substantive (→ pre-fetch PubMed) and whether
+        // the user explicitly asked for citations (→ render the
+        // **Literature:** / **PubMed (live):** sections).
         // ============================================================
         function lastUserText(history) {
             for (let i = history.length - 1; i >= 0; i--) {
@@ -368,26 +356,46 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
 
         // ============================================================
         // The trivial-vs-substantive classifier was previously used to
-        // gate `effort: "high"`. We now reserve "high" exclusively for
-        // the literature pre-flight (decided below from
-        // `prefetchedPubmedJSON`), so this classifier is no longer
-        // consulted — but `lastUser` is still needed below to detect
-        // literature requests and to build the PubMed query.
+        // gate `effort: "high"`. We now run every turn at "low" (see
+        // callClaude), so this only feeds the PubMed pre-fetch and the
+        // citation-rendering decision below.
         // ============================================================
         const lastUser = lastUserText(messages).trim();
 
         // ============================================================
-        // PROACTIVE PUBMED PRE-FETCH
-        // When the user asks about literature/evidence/references,
-        // run the PubMed search BEFORE calling Claude. The results are
-        // injected into the first (and only) Claude call via the system
-        // prompt, so Claude never needs to invoke the search_pubmed tool
-        // on this turn. This avoids the two-Claude-call round-trip that
-        // would time out on Netlify's function limit.
+        // PROACTIVE PUBMED PRE-FETCH — runs on EVERY substantive turn.
+        //
+        // The product behaviour we want is:
+        //   • From the app  → grounded in the formulas / models.
+        //   • Broader context → ALWAYS grounded in the curated library
+        //     and a fresh PubMed look-up, not in the LLM's raw recall.
+        //   • Literature: / PubMed (live):  citation lists are rendered
+        //     ONLY when the user explicitly asked for references.
+        //
+        // To make that possible we always pre-fetch PubMed (when the
+        // turn is substantive) and inject the results into the system
+        // prompt. The model uses them silently as grounding for
+        // **Broader context**, and only renders the citation lists when
+        // `userAskedForReferences` is true. Doing the fetch server-side
+        // also avoids a second Anthropic round-trip via the
+        // `search_pubmed` tool, which would blow past Netlify's 26 s
+        // function limit.
         // ============================================================
 
-        // Detects explicit literature/evidence requests.
-        const LITERATURE_REQUEST = /\b(what does (the )?literature|literature say|evidence|recent papers?|pubmed|current literature|what.*stud(y|ies)|what.*research|papers? on|any (studies|papers|research)|references?|citations?)\b/i;
+        // Trivial = greetings / thanks / one-word acks. Anything else
+        // is treated as substantive and triggers the PubMed pre-fetch.
+        function isTrivialMessage(text) {
+            const t = (text || "").trim();
+            if (!t) return true;
+            if (t.length < 12 && !/\?/.test(t)) return true;
+            return /^(hi|hello|hey|thanks|thank you|thx|ok|okay|cool|got it|nice|great|sure|yes|no|yep|nope|bye)[\s!.?]*$/i.test(t);
+        }
+
+        // Detects explicit literature/evidence requests — controls
+        // whether the citation lists are RENDERED in the reply.
+        const LITERATURE_REQUEST = /\b(what does (the )?literature|literature say|evidence|recent papers?|pubmed|current literature|what.*stud(y|ies)|what.*research|papers? on|any (studies|papers|research)|references?|citations?|cite|sources?)\b/i;
+        const userAskedForReferences = LITERATURE_REQUEST.test(lastUser);
+        const isSubstantive = !isTrivialMessage(lastUser);
 
         // Extracts a focused PubMed query from the last few messages by
         // matching key clinical/biomechanical terms from the conversation.
@@ -440,7 +448,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         let prefetchedPubmedJSON = null;
         let prefetchedPubmedQuery = '';
 
-        if (LITERATURE_REQUEST.test(lastUser)) {
+        if (isSubstantive) {
             prefetchedPubmedQuery = buildPubmedQuery(messages);
             if (prefetchedPubmedQuery) {
                 try {
@@ -457,17 +465,22 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         // PubMed results when available so Claude can answer in one call.
         let firstCallSystem = systemPrompt;
         if (prefetchedPubmedJSON) {
+            const renderInstruction = userAskedForReferences
+                ? `The user explicitly asked for references / evidence / citations on this turn, so RENDER the **PubMed (live):** section using these hits (per LITERATURE PROTOCOL §E.4) in addition to using them as grounding for **Broader context**.`
+                : `The user did NOT explicitly ask for references on this turn, so DO NOT render a **PubMed (live):** section. Use these hits SILENTLY as grounding for **Broader context** only — you may refer to them generically (e.g. "a recent PubMed entry on bridge plating in torsion") without producing the formal citation list.`;
             firstCallSystem = systemPrompt +
-                `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched for this turn (see above). Use them directly in your **PubMed (live):** section following the LITERATURE PROTOCOL §E rules. Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
+                `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched server-side for this turn (see above). ${renderInstruction} Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
         }
 
-        // Spend the "high" effort tier only when we are actually running
-        // the literature pre-flight (the LITERATURE PROTOCOL multi-step
-        // classifier needs the room). All other turns — trivial AND
-        // ordinary substantive biomechanics questions — run at "low" so
-        // they finish inside Netlify's 26 s function limit. Adaptive
-        // thinking still scales internally when the prompt warrants it.
-        const effort = prefetchedPubmedJSON ? "high" : "low";
+        // Always run at "low" effort. `output_config.effort` is a CEILING
+        // on Opus 4.7's adaptive thinking, not a floor — the model still
+        // scales internally on hard turns. Empirically, "high" combined
+        // with the very large system prompt (app-knowledge.md +
+        // literature.md + the injected PubMed JSON we now add to every
+        // substantive turn) blew past Netlify's 26 s function cap and
+        // surfaced as either a "Network error" toast (504 → JSON parse
+        // throws) or a reply truncated mid-sentence.
+        const effort = "low";
 
         let data = await callClaude(messages, { effort, systemOverride: firstCallSystem });
 
