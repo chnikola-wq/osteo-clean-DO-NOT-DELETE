@@ -1744,9 +1744,9 @@
                                 </p>
                             </div>
                             <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <strong className="text-slate-700 dark:text-slate-300 text-sm block mb-1">The "Diminishing Returns" Illusion</strong>
+                                <strong className="text-slate-700 dark:text-slate-300 text-sm block mb-1">Steady Returns, Falling Rate</strong>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    You might assume that because Plate AMI grows cubically with thickness (<Latex math="t^3" />), it should easily overpower the linear growth of <Latex math="y" />. But look closely at the live formula! As the plate gets thicker, it pulls the neutral axis towards itself. <strong className="text-rose-500">Paradoxically, the Plate's total contribution term actually decreases</strong> because its lever arm (<Latex math="d_{plate}" />) shrinks! However, the axis moving away from the bone causes the <em>Bone's</em> term to skyrocket. Even so, a massive increase in <Latex math="I_p" /> only bumps the Total Composite AMI by ~20%. Since the denominator barely grows, the growing <Latex math="y" /> numerator causes the stress drop to flatten out.
+                                    You might assume that because Plate AMI grows cubically with thickness (<Latex math="t^3" />), it should easily overpower the linear growth of <Latex math="y" />. Look closely at the live formula! As the plate gets thicker, it pulls the neutral axis towards itself, so the Plate's lever arm (<Latex math="d_{plate}" />) shrinks while the Bone's lever arm (<Latex math="d_{bone}" />) grows — and the bone term <Latex math="A_b \cdot d_{bone}^2" /> rises sharply. Across the full Vi catalogue (2.7 → 4.5 Broad), the Total Composite AMI grows by roughly <strong>~54%</strong>, and the stress curve falls almost linearly with each upsize step — a meaningful drop per step rather than a true plateau. The <em>rate per unit <Latex math="I_p" /></em> does fall steeply, but the <em>absolute</em> stress reduction at each successive size step does not flatten.
                                 </p>
                             </div>
                         </div>
@@ -1816,7 +1816,7 @@
                         </div>
 
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                            By calculating the mathematical rates of change across the curves, we can objectively answer: <em>Which brings the biggest stress reduction—Material, Span, or Geometry? And at what point is up-sizing the plate no longer worth it?</em>
+                            By calculating the mathematical rates of change across the curves, we can objectively compare the three levers — <em>Material, Span, and Geometry</em> — and weigh each against its clinical cost: added physical bulk, soft-tissue burden, and <strong>stress-shielding of the underlying bone</strong>.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1830,7 +1830,7 @@
                                     <span className="text-xs font-bold">Δ -4.1 MPa Total</span>
                                 </div>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Switching to Titanium grants a mathematically safe reduction in plate stress <em>without adding a single millimetre of physical bulk</em>. This is invaluable when soft-tissue coverage is poor.
+                                    <strong>Conclusion:</strong> Switching to Titanium grants a meaningful reduction in plate stress <em>without adding a single millimetre of physical bulk and without increasing stress-shielding of the underlying bone</em>. This is invaluable when soft-tissue coverage is poor or when up-sizing is mechanically unwise (e.g. small bone diameter). It is, however, no longer the single largest lever — a single up-size step can deliver a comparable or greater drop (see Card 3).
                                 </p>
                             </div>
 
@@ -1850,7 +1850,7 @@
 
                             {/* GEOMETRY CARD (Full Width) */}
                             <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-800/50 md:col-span-2 flex flex-col">
-                                <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Diminishing Returns)</strong>
+                                <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Steady, Substantial Returns)</strong>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mb-2 border-l-2 border-blue-300 dark:border-blue-700 pl-2">
                                     *Note: Evaluated across the unconstrained composite curve (Section 4). Micro-plates excluded.
                                 </p>
@@ -1860,19 +1860,19 @@
                                 <ul className="space-y-2 text-[10px] font-mono text-slate-700 dark:text-slate-300 mb-4 bg-white dark:bg-slate-800 p-3 rounded border border-blue-200 dark:border-blue-700 shadow-sm">
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
                                         <span>2.7mm → 3.5 Nar:</span> 
-                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -2.2 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.11 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -5.9 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.32 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 pt-2">
                                         <span>3.5 Nar → 3.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -1.6 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.07 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center pt-2">
                                         <span>3.5 Brd → 4.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -0.7 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.007 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
                                     </li>
                                 </ul>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Up-sizing from a 2.7 to a 3.5 Narrow yields a meaningful 2.2 MPa reduction. Up-sizing further offers sharply diminishing returns. Going all the way to a massive 4.5mm plate barely moves the needle (only a 0.7 MPa drop) because the geometric axis shift entirely neutralises the newly added steel.
+                                    <strong>Conclusion:</strong> Each up-size step buys a clinically meaningful drop in plate stress — ~5.9 MPa for 2.7 → 3.5 Narrow, and ~3.3 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.3 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective.
                                 </p>
                             </div>
                         </div>
@@ -2394,6 +2394,9 @@
                                 <h2 className="text-lg font-extrabold text-amber-700 dark:text-amber-400">Independent Expert Reviews</h2>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed italic max-w-2xl">
                                     The following reviews were independently produced by two AI language models — <strong className="not-italic text-slate-600 dark:text-slate-300">Gemini 3.1</strong> and <strong className="not-italic text-slate-600 dark:text-slate-300">Claude Sonnet 4.6</strong> — after each model rigorously audited all mathematical models, logic, and clinical claims within this application. No human editorial changes were made to either review.
+                                </p>
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-2 leading-relaxed not-italic max-w-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-md px-2 py-1.5">
+                                    <strong>Editor's note:</strong> Both reviews were generated <em>before</em> the Tab&nbsp;2 plate-width correction (real plate width <Latex math="w" /> from the Vi catalogue, with <Latex math="D = r_{bone} + t/2" />). After that fix, each up-size step now delivers an absolute stress drop comparable to — or greater than — the Steel→Ti material swap. Statements in the reviews about "diminishing returns" from increasing plate thickness, or about material choice "dominating geometry", therefore no longer reflect the current model.
                                 </p>
                             </div>
                         </div>
