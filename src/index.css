@@ -1,0 +1,85 @@
+/* Tailwind directives — processed at build time by PostCSS instead of
+   the runtime CDN script (cdn.tailwindcss.com) used previously. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   The block below is the original inline <style> from index.html,
+   moved here verbatim so the build pipeline can ship it as a single
+   minified, content-hashed CSS file.
+   ------------------------------------------------------------------ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+
+.fade-in { animation: fadeIn 0.5s ease-out; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Standard Slider Styling */
+input[type=range] {
+    -webkit-appearance: none;
+    background: transparent;
+    width: 100%;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    margin-top: -8px;
+    border: 3px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:active {
+    transform: scale(1.15);
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    background: #cbd5e1;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+.dark input[type=range]::-webkit-slider-runnable-track {
+    background: #475569;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+/* Slow attention pulse for the Biomechanics Tutor button */
+@keyframes pulse-slow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+    50%      { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+}
+.animate-pulse-slow { animation: pulse-slow 2.6s ease-out infinite; }
+
+/* Prose styles for assistant chat bubbles */
+.chat-prose p                { margin-top: 0.5em; margin-bottom: 0.5em; line-height: 1.6; }
+.chat-prose p:first-child    { margin-top: 0; }
+.chat-prose p:last-child     { margin-bottom: 0; }
+.chat-prose ul               { list-style: disc; padding-left: 1.25em; margin: 0.4em 0; }
+.chat-prose ol               { list-style: decimal; padding-left: 1.25em; margin: 0.4em 0; }
+.chat-prose li               { margin: 0.2em 0; line-height: 1.5; }
+.chat-prose strong           { font-weight: 700; }
+.chat-prose em               { font-style: italic; }
+.chat-prose h1,
+.chat-prose h2,
+.chat-prose h3               { font-weight: 700; margin: 0.6em 0 0.2em; line-height: 1.3; }
+.chat-prose h1               { font-size: 1.05em; }
+.chat-prose h2               { font-size: 1em; }
+.chat-prose h3               { font-size: 0.95em; }
+.chat-prose code             { font-family: monospace; background: rgba(0,0,0,0.08); border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.9em; }
+.dark .chat-prose code       { background: rgba(255,255,255,0.1); }
+.chat-prose hr               { border: none; border-top: 1px solid rgba(0,0,0,0.15); margin: 0.6em 0; }
+.dark .chat-prose hr         { border-top-color: rgba(255,255,255,0.15); }
