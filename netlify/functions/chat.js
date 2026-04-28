@@ -333,17 +333,40 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // whole point of routing away from Opus. So for Sonnet turns we
             // disable adaptive thinking entirely and cap max_tokens at a value
             // comfortably above any realistic lit-meta reply. Opus turns keep
-            // the original adaptive-thinking + 16k budget — they're slower by
-            // design but they handle the biomechanical reasoning load.
+            // the adaptive-thinking budget — they're slower by design but
+            // they handle the biomechanical reasoning load.
             const isFastLitTurn = /sonnet/i.test(chosenModel);
             const body = {
                 model: chosenModel,
-                // Adaptive thinking tokens are billed against `max_tokens`,
-                // so a long internal reasoning pass can leave very little
-                // headroom for the actual reply and surface as a reply that
-                // truncates mid-sentence (e.g. "Literature: The curated app
-                // library ("). Give the response budget meaningful room.
-                max_tokens: isFastLitTurn ? 4096 : 16000,
+                // `max_tokens` is the combined ceiling on (adaptive thinking
+                // tokens + visible reply tokens). It is therefore also the
+                // de-facto wall-time cap on the upstream Anthropic call:
+                // higher `max_tokens` lets adaptive thinking run longer
+                // before the model is forced to commit to a reply.
+                //
+                // Opus 4.7 reply lengths in this app are empirically
+                // 600–1500 visible tokens (see the curated transcripts in
+                // app-knowledge.md and the literature synthesis turns).
+                // 8192 leaves ~6 K headroom for adaptive thinking on
+                // `effort: "low"`, which is plenty for the synthesis turns
+                // we observe — and bounds worst-case wall time so deep
+                // multi-turn synthesis questions ("how do all these
+                // combine?") stop breaching Anthropic's 24 s ceiling. The
+                // previous 16 000 ceiling let adaptive thinking run long
+                // enough that even with PubMed prefetch removed from the
+                // critical path, total round-trip exceeded 24 s and the
+                // user saw the "Anthropic API call timed out" toast on
+                // turn 3+ of biomech-reasoning sessions. If thinking does
+                // overrun the budget Anthropic returns a clean
+                // `stop_reason: "max_tokens"` (which the model handles by
+                // ending the reply) rather than the lambda dying mid-
+                // stream — graceful degradation vs hard timeout.
+                //
+                // Sonnet lit-meta turns keep their 4 K budget — they have
+                // adaptive thinking disabled entirely (see below) so the
+                // whole budget is reply tokens, and 4 K is well above any
+                // realistic lit-meta reply length.
+                max_tokens: isFastLitTurn ? 4096 : 8192,
                 system: systemOverride || systemPrompt,
                 tools: toolsOverride || tools,
                 messages: messageHistory
