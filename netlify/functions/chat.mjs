@@ -2,10 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// __dirname is not defined in ESM; derive it from import.meta.url so
-// the included_files (app-knowledge.md, literature.md) still resolve
-// relative to the bundled function.
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// `__dirname` is reserved/pre-declared by Netlify's function runtime
+// when it loads our .mjs file (it injects a CJS-style scope wrapper),
+// so re-declaring it here causes a hard SyntaxError ("Identifier
+// '__dirname' has already been declared") at module-load time, which
+// surfaces to the browser as an instant 502 before our handler ever
+// runs. Use a uniquely-named local instead.
+const __chatDir = path.dirname(fileURLToPath(import.meta.url));
 
 // ============================================================
 // LOAD APP KNOWLEDGE FROM EXTERNAL MARKDOWN FILE
@@ -16,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let appKnowledge = '';
 try {
     // The file lives next to chat.js in the functions folder.
-    const knowledgePath = path.join(__dirname, 'app-knowledge.md');
+    const knowledgePath = path.join(__chatDir, 'app-knowledge.md');
     appKnowledge = fs.readFileSync(knowledgePath, 'utf-8');
 } catch (err) {
     console.error('Could not load app-knowledge.md:', err);
@@ -30,7 +33,7 @@ try {
 // ============================================================
 let appLiterature = '';
 try {
-    const literaturePath = path.join(__dirname, 'literature.md');
+    const literaturePath = path.join(__chatDir, 'literature.md');
     appLiterature = fs.readFileSync(literaturePath, 'utf-8');
 } catch (err) {
     console.error('Could not load literature.md:', err);
