@@ -1488,12 +1488,36 @@
 
                     // Pre-stream errors (e.g. missing API key, malformed
                     // body) still come back as a regular JSON response.
+                    // Platform-level failures (Netlify 502, 504, function
+                    // crash) come back as HTML — we surface BOTH the HTTP
+                    // status and a short body excerpt in the toast so the
+                    // user sees something actionable instead of a bare
+                    // "Sorry, I encountered an error" with no clue why.
                     const contentType = response.headers.get('content-type') || '';
                     if (!response.ok || !contentType.includes('text/event-stream')) {
-                        let detail = '';
+                        let detail = `\n\n*(HTTP ${response.status}${response.statusText ? ' ' + response.statusText : ''})*`;
                         try {
-                            const data = await response.json();
-                            if (data && data.error) detail = `\n\n*(${data.error})*`;
+                            const raw = await response.text();
+                            // Prefer JSON `error` field when the body is
+                            // structured. Otherwise fall back to the raw
+                            // body (trimmed + truncated) so platform
+                            // errors like a 502 HTML page are still visible.
+                            let parsed = null;
+                            try { parsed = JSON.parse(raw); } catch (_) {}
+                            if (parsed && parsed.error) {
+                                detail = `\n\n*(HTTP ${response.status}: ${parsed.error})*`;
+                            } else if (raw && raw.trim()) {
+                                // Strip HTML tags for readability and
+                                // cap length so a full HTML error page
+                                // doesn't blow up the chat bubble.
+                                const cleaned = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                                const excerpt = cleaned.length > 200 ? cleaned.slice(0, 200) + '…' : cleaned;
+                                if (excerpt) detail = `\n\n*(HTTP ${response.status}: ${excerpt})*`;
+                            }
+                            // Always log the raw body to the console so
+                            // the user can grab the full text from
+                            // devtools when reporting issues.
+                            console.error('[chat] non-stream response', response.status, raw);
                         } catch (_) {}
                         setMessages([...newMessages, { role: "assistant", content: `Sorry, I encountered an error. Please try again.${detail}` }]);
                         return;
