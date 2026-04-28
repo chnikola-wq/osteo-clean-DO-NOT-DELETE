@@ -1,5 +1,11 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// __dirname is not defined in ESM; derive it from import.meta.url so
+// the included_files (app-knowledge.md, literature.md) still resolve
+// relative to the bundled function.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ============================================================
 // LOAD APP KNOWLEDGE FROM EXTERNAL MARKDOWN FILE
@@ -34,16 +40,21 @@ try {
 // ============================================================
 // Netlify Functions v2 handler (streaming).
 //
-// We deliberately use the v2 `(req, context) => Response` signature
-// rather than the legacy `exports.handler = (event, context)` form
-// because v2 is the only path on Netlify that supports a streaming
-// response body. Streaming bypasses the 26 s synchronous-function
-// idle cap (the limit becomes the streaming cap, currently 15 min)
-// AND lets the user see Claude's tokens as they arrive instead of
-// waiting for the full reply. A v1 handler returns a buffered
-// `{statusCode, body}` envelope and cannot stream.
+// We use ESM `export default` (the canonical v2 form) so Netlify's
+// runtime detects this as a v2 streaming function rather than a
+// legacy v1 `exports.handler`. v2 is the only path on Netlify that
+// supports a streaming response body. Streaming bypasses the 26 s
+// synchronous-function idle cap (the limit becomes the streaming cap,
+// currently 15 min) AND lets the user see Claude's tokens as they
+// arrive instead of waiting for the full reply.
+//
+// NOTE: With CommonJS `module.exports = fn` the Netlify bundler can
+// silently fall back to v1 detection and reject the `Response` return
+// value, surfacing as a generic 502 / "Sorry, I encountered an error"
+// in the chat UI. The `.mjs` extension + `export default` removes
+// that ambiguity.
 // ============================================================
-module.exports = async function(req, context) {
+export default async function(req, context) {
     if (req.method !== "POST") {
         return new Response("Method Not Allowed", { status: 405 });
     }

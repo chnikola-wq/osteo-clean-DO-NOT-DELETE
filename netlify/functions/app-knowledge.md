@@ -2,7 +2,7 @@
 
 > This file is the AI tutor's source of truth about what the app teaches.
 > Edit this file directly when you change anything in the app.
-> No code changes needed — chat.js reads this file on every cold start.
+> No code changes needed — chat.mjs reads this file on every cold start.
 
 ---
 
