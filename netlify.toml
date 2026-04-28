@@ -3,5 +3,13 @@
   included_files = ["netlify/functions/app-knowledge.md", "netlify/functions/literature.md"]
   node_bundler = "esbuild"
 
-[functions.chat]
-  timeout = 26
+# NOTE: do NOT add `[functions.chat] timeout = …` here. The chat
+# function is a v2 streaming function (returns a ReadableStream
+# Response). Configuring `timeout` forces Netlify to treat the
+# function as synchronous: the platform buffers the entire SSE
+# stream until completion and then enforces the 26 s sync cap,
+# which kills long Opus reasoning turns and surfaces in the chat
+# UI as "Sorry, I encountered an error. Please try again." with
+# no parenthetical detail (because the body is an HTML 502, not
+# JSON). Streaming functions use the platform's streaming cap
+# (~15 min) automatically; no per-function override is needed.
