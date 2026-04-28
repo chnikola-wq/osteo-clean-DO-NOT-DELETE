@@ -288,7 +288,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         // the Lambda response round-trip.
         const ANTHROPIC_TIMEOUT_MS = 24000;
 
-        async function callClaude(messageHistory, { effort, systemOverride } = {}) {
+        async function callClaude(messageHistory, { effort, systemOverride, model, toolsOverride } = {}) {
             // Claude Opus 4.7 replaced the legacy
             // `thinking: { type: "enabled", budget_tokens: N }` contract with
             // `thinking: { type: "adaptive" }` plus `output_config.effort`.
@@ -301,7 +301,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // a reply truncated mid-sentence in the chat UI.
             const effortLevel = effort === "high" ? "high" : "low";
             const body = {
-                model: "claude-opus-4-7",
+                model: model || "claude-opus-4-7",
                 // Adaptive thinking tokens are billed against `max_tokens`,
                 // so a long internal reasoning pass can leave very little
                 // headroom for the actual reply and surface as a reply that
@@ -309,7 +309,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 // library ("). Give the response budget meaningful room.
                 max_tokens: 16000,
                 system: systemOverride || systemPrompt,
-                tools: tools,
+                tools: toolsOverride || tools,
                 messages: messageHistory,
                 thinking: { type: "adaptive" },
                 output_config: { effort: effortLevel }
@@ -496,7 +496,65 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         // throws) or a reply truncated mid-sentence.
         const effort = "low";
 
-        let data = await callClaude(messages, { effort, systemOverride: firstCallSystem });
+        // ============================================================
+        // INTENT-BASED MODEL ROUTING (Option 3)
+        // ------------------------------------------------------------
+        // Pure literature meta-questions ("what does the literature say
+        // about X?", "what papers did you cite?", "is the evidence
+        // contradictory on Y?") don't need Opus's biomechanical
+        // reasoning — they need fast, faithful synthesis of
+        // <app_literature> + the prefetched PubMed JSON. Route those to
+        // Sonnet 4.6, which lands in ~6–10 s on this prompt and avoids
+        // Opus's 24 s timeout ceiling.
+        //
+        // The classifier is INTENTIONALLY conservative — false-positive
+        // (biomech routed to Sonnet) degrades answer quality, whereas
+        // false-negative (lit routed to Opus) only costs latency. So we
+        // require BOTH a literature/meta cue AND the absence of any
+        // biomechanical-reasoning cue before swapping models.
+        // ============================================================
+        function isPureLiteratureMetaQuestion(text) {
+            const t = (text || "").trim().toLowerCase();
+            if (!t) return false;
+            // STRONG meta-literature phrasings — the question is
+            // explicitly ABOUT what the literature/evidence says, not a
+            // clinical-reasoning question that happens to mention
+            // papers. When matched, we route to Sonnet even if the
+            // topic of the question contains biomech terms (e.g. the
+            // failing transcript turn "are there contradictory findings
+            // in the literature regarding working length?" mentions
+            // "working length" but is fundamentally a lit-meta query).
+            const STRONG_LIT_META = /(what (does|do|did) (the )?(literature|research|evidence|studies?|papers?|sources?)|what (literature|papers?|studies|research|sources?|references?|citations?) (did|do|have|are)|in the (literature|published evidence|published research)\b|any (studies|papers|research|trials?) on\b|is there (a |any )?(study|paper|research|literature|trial|evidence)|are there (any )?(contradictory|conflicting|consistent|published)?\s*(findings|studies|papers|results|trials?|reports?|data) (in|from|across|on|regarding|about)|contradictory (findings|results|evidence|reports?|literature)|conflicting (findings|results|evidence|reports?|literature)|consensus (in|of|across) (the )?(literature|evidence|studies)|where (did|does).*(come|from)|show me your sources|cite (your |that |the )|what (papers?|sources?|references?) did you (use|cite)|what did (the )?(authors?|stoffel|hoffmeier|bonyun|gardner|bottlang|gautier|perren|egol|wagner) (say|find|conclude|report|show)|what (does|do) (stoffel|hoffmeier|bonyun|gardner|bottlang|gautier|perren|egol|wagner)(\s+\(?\d{2,4}\)?)?\s+(say|find|conclude|report|show|argue|claim))/;
+            if (STRONG_LIT_META.test(t)) return true;
+            // Otherwise fall back to the conservative rule: a literature
+            // cue MUST be present AND no biomechanical-reasoning cue
+            // can be present. False-negative (lit→Opus) only costs
+            // latency; false-positive (biomech→Sonnet) degrades quality,
+            // so the bias is intentionally toward Opus.
+            const BIOMECH_CUES = /\b(stress|stiffness|strain|moment|deflection|secant|p-?delta|ami|i_?p|working length|load|axial|torsion|bending|fatigue|cyclic|titanium|stainless steel|ti |steel\b|plate (size|thickness|width)|screw|monocortical|bicortical|gap|bridging|closed[- ]gap|composite|parallel spring|model [123]|tab [1-4]|formula|calculate|compute|predict|how (much|many|big|stiff)|what happens (if|when|to)|should i (use|choose|pick)|which (plate|material|construct|model)|tibia|femur|humerus|fracture|osteosynthesis|callus|periosteum)\b/;
+            if (BIOMECH_CUES.test(t)) return false;
+            const LIT_META_CUES = /\b(literature|paper|papers|study|studies|research|reference|references|citation|citations|cite|cited|source|sources|pubmed|evidence|publication|publications|manuscript|manuscripts|author|authors|et al\.?|journal|abstract|finding|findings|contradict|contradictory|consensus|disagree|disagreement|controversy)\b/;
+            return LIT_META_CUES.test(t);
+        }
+
+        const routeToSonnet = isPureLiteratureMetaQuestion(lastUser);
+        // Sonnet 4.6 has its own quirks with the `tools` API and tends
+        // to be more eager to call `search_pubmed` than Opus. Since we
+        // already inject the prefetched PubMed JSON into its system
+        // prompt, omit `search_pubmed` from its tools entirely so it
+        // can't add a tool-loop iteration to a model we chose
+        // specifically to be fast. `calculate_bridging_stress` is also
+        // dropped — pure-lit meta-questions never need it, and a
+        // spurious tool call would defeat the latency win.
+        const turnModel = routeToSonnet ? "claude-sonnet-4-6" : "claude-opus-4-7";
+        const turnTools = routeToSonnet ? [] : tools;
+
+        let data = await callClaude(messages, {
+            effort,
+            systemOverride: firstCallSystem,
+            model: turnModel,
+            toolsOverride: turnTools
+        });
 
         // ============================================================
         // TOOL EXECUTION LOOP
@@ -528,7 +586,11 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 { role: "user", content: toolResults }
             ];
 
-            data = await callClaude(conversation, { effort });
+            data = await callClaude(conversation, {
+                effort,
+                model: turnModel,
+                toolsOverride: turnTools
+            });
         }
 
         const replyText = (data.content || [])
