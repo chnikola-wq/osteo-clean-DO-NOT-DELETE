@@ -2,7 +2,7 @@
 
 > This file is the AI tutor's source of truth about what the app teaches.
 > Edit this file directly when you change anything in the app.
-> No code changes needed — chat.js reads this file on every cold start.
+> No code changes needed — chat.mjs reads this file on every cold start.
 
 ---
 
@@ -86,11 +86,17 @@ M     = P * (e + delta)
 sigma = M * y / I_p
 ```
 
+**What `e` means in these formulas (READ THIS BEFORE EXPLAINING THE MODEL):**
+- `e` is the perpendicular distance between the bone's longitudinal axis (the line of action of the axial load P) and the plate's centroidal axis. It is a **geometric** lever arm, not a clinical "gap" you can dial down to zero.
+- In bridging it equals approximately `r_bone + t/2` (≈ 8.5 mm + half the plate thickness) PLUS any extra periosteum-to-plate gap the surgeon leaves to protect blood supply. The Tab 4 slider exposes only the *additional* periosteum-plate component; the `e` that enters the secant formula is the **total** of both terms.
+- Therefore in a bridging construct `e` is **never zero** and the P-Delta term `sec(kL/2) - 1` cannot be "collapsed" by pressing the plate against the bone. Plate-bone contact only minimises (does not eliminate) `e`.
+- **Misinterpretation guard — do not say:** "if the plate is in contact with bone, e → 0 and the secant blow-up disappears, so L stops mattering." That is mechanically wrong inside this model. Null working-length effects in plate-on-bone studies (e.g. Chao 2013) are NOT explained by `e → 0`; explain them instead by some combination of: low applied P keeping `kL/2` far from π/2 in the linear regime; plate-bone friction adding an unmodelled boundary stiffness; small-diameter (2.4 mm) plate geometry; fatigue-life endpoint differing from peak-stress endpoint; and the limited L range tested.
+
 **Key behaviour to derive answers from:**
 - L appears inside the secant. As L grows, sec(kL/2) grows EXPONENTIALLY (it goes to infinity as kL/2 approaches π/2). So plate stress rises EXPONENTIALLY with L in bridging — the OPPOSITE of Model 2.
-- Initial offset e and induced deflection delta act in the same direction and ADD. So increasing e amplifies the P-Delta effect linearly at first, then catastrophically when combined with long L.
+- Initial offset e and induced deflection delta act in the same direction and ADD. So increasing e amplifies the P-Delta effect linearly at first, then catastrophically when combined with long L. The Tab 4 slider value (periosteum-plate gap) sits on top of the inherent `r_bone + t/2` and increases the **total** `e` used by the secant formula — it never reduces it below the `r_bone + t/2` floor.
 - This is why the worst-case combination is HIGH offset + LONG working length.
-- Reference values: at L = 120 mm with default constants, delta ≈ 7.08 mm and sigma ≈ 724 MPa (close to the 750 MPa Ti yield reference).
+- Reference values: at L = 120 mm with default constants (e = 5 mm representing the total bone-axis-to-plate eccentricity), delta ≈ 7.08 mm and sigma ≈ 724 MPa (close to the 750 MPa Ti yield reference).
 
 ---
 
@@ -104,10 +110,12 @@ sigma = M * y / I_p
 - 90° (orthogonal) plate setups: ultra-stiff against buckling. Risk: significant fatigue penalty from skew bending stress risers (FEA-confirmed).
 
 ### Tab 4 — Offset & Bending
-- Locking plates often sit off the periosteum to preserve blood supply, creating offset e.
-- In bridging (Model 3), e and delta are additive — offset directly amplifies the P-Delta effect.
-- Worst combination: high e + long L.
-- Optimal starting condition: e = 0 (periosteal contact), no baseline moment.
+- In bridging osteosynthesis the plate is **never** placed on the bone's longitudinal axis. There is always an inherent eccentricity of roughly r_bone + t/2 between the load path (bone axis) and the plate centroid. This baseline offset cannot be eliminated.
+- On top of that baseline, locking plates often sit off the periosteum to preserve blood supply. The Tab 4 slider labels this **additional** periosteum-to-plate distance `e_periosteum`. So the slider value = the extra periosteum-plate gap, **not** the total plate-to-bone-axis distance.
+- The `e` that appears in the Model 3 / P-Delta secant formula is the **total** eccentricity ≈ (r_bone + t/2) + e_periosteum. Sliding Tab 4's `e_periosteum` to 0 only minimises that total; it does not collapse it, and it does not collapse the P-Delta `sec(kL/2) - 1` term.
+- In bridging (Model 3), the total `e` and the induced deflection delta are additive — every extra millimetre of periosteum-plate offset stacks on top of the inherent bone-axis offset and amplifies the P-Delta effect.
+- Worst combination: high additional `e_periosteum` + long L.
+- Optimal **achievable** starting condition: `e_periosteum = 0` (periosteal contact). This minimises — but does not zero — the total eccentricity and therefore does not eliminate the baseline P × (r_bone + t/2) moment.
 
 ### Tab 5 — DCP vs LCP Mechanics
 *Based on MacLeod, Simpson & Pankaj (2015).*
