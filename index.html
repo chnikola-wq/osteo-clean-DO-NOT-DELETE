@@ -2116,14 +2116,14 @@
                 <div className="fade-in space-y-6">
                     <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
                         <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300">
-                            Locking plates are often positioned off the periosteum to preserve blood supply. However, this <strong>offset distance (<Latex math="e" />)</strong> acts as a destructive lever arm. Any axial load (<Latex math="P" />) is instantly converted into a bending moment (<Latex math={'M = P \\times e'} />).
+                            In bridging osteosynthesis the plate is <strong>never</strong> placed on the bone's longitudinal axis — there is always an inherent eccentricity of roughly the bone radius plus half the plate thickness (<Latex math={'r_{bone} + t/2'} />) between the load path and the plate centroid. On top of that baseline, locking plates are often held off the periosteum to preserve blood supply. We label this <strong>additional</strong> periosteum-to-plate distance <Latex math="e" />. Both eccentricities act as a lever arm: any axial load (<Latex math="P" />) is converted into a bending moment, and increasing <Latex math="e" /> only adds to the moment that already exists at <Latex math="e = 0" />.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                             <div className="flex justify-between mb-2">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200">Bone-Plate Offset (<Latex math="e" />)</label>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200">Periosteum-Plate Offset (<Latex math="e" />)</label>
                                 <span className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded">{offset} mm</span>
                             </div>
                             <input type="range" min="0" max="15" step="1" value={offset} onChange={(e) => setOffset(Number(e.target.value))} className="mb-6" />
@@ -2151,7 +2151,7 @@
                                 <rect x="110" y="120" width={offset * 5} height="6" className="fill-slate-400" />
                                 
                                 <line x1="80" y1="100" x2={110 + (offset * 5)} y2="100" className="stroke-amber-500 stroke-2" />
-                                <text x={95 + (offset * 2.5)} y="95" className="fill-amber-600 font-bold text-[10px]" textAnchor="middle">Offset (e)</text>
+                                <text x={95 + (offset * 2.5)} y="95" className="fill-amber-600 font-bold text-[10px]" textAnchor="middle">Periosteum→Plate (e)</text>
 
                                 {offset > 0 && (
                                     <path d={`M 60 30 Q ${120 + offset*5} 0 ${120 + offset*5} 40`} fill="none" className="stroke-rose-500 stroke-2" markerEnd="url(#arrow)" />
@@ -2194,14 +2194,14 @@
                             <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
                                 <strong className="text-emerald-700 dark:text-emerald-400 text-sm block mb-2">Periosteal Contact (<Latex math="e = 0" />)</strong>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    When the plate lies flush against the periosteum, the initial eccentricity is zero and there is no baseline bending moment. Any deflection (<Latex math="\delta" />) that develops must do all the work alone. This is the mechanically optimal starting condition.
+                                    When the plate lies flush against the periosteum the <em>additional</em> offset is zero, but the inherent eccentricity between the plate and the bone's longitudinal axis (<Latex math={'\\approx r_{bone} + t/2'} />) remains. A baseline bending moment therefore still exists — pressing the plate onto bone only minimises the lever arm, it never eliminates it. This is the mechanically optimal starting condition the construct can achieve.
                                 </p>
                             </div>
                         </div>
 
                         <div className="mt-6 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                             <p className="text-xs text-slate-600 dark:text-slate-400">
-                                <strong className="text-indigo-700 dark:text-indigo-400">Clinical Rule:</strong> Minimise bone-plate offset wherever blood supply allows. Every millimetre of offset (<Latex math="e" />) adds a fixed baseline moment of <Latex math="P \times e" /> that persists throughout the entire healing phase, compounding the P-Delta amplification from working length.
+                                <strong className="text-indigo-700 dark:text-indigo-400">Clinical Rule:</strong> The plate-to-bone-axis offset is unavoidable in bridging, so minimise the <em>additional</em> periosteum-plate offset (<Latex math="e" />) wherever blood supply allows. Every millimetre of <Latex math="e" /> stacks on top of the inherent <Latex math={'r_{bone} + t/2'} /> eccentricity and adds a fixed baseline moment of <Latex math="P \times e" /> that persists throughout the entire healing phase, compounding the P-Delta amplification from working length.
                             </p>
                         </div>
                     </div>

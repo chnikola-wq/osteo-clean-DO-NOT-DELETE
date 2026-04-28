@@ -148,7 +148,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                         workingLength: { type: "number", description: "Unsupported working length L in mm (e.g., 60)." },
                         plateAMI: { type: "number", description: "Plate Area Moment of Inertia I_p in mm^4. Default 25." },
                         axialLoad: { type: "number", description: "Axial load P in Newtons. Default 1000." },
-                        offset: { type: "number", description: "Initial bone-plate offset e in mm. Default 5." }
+                        offset: { type: "number", description: "Periosteum-to-plate offset e in mm (the additional gap on top of the inherent plate-to-bone-axis eccentricity that is always present in bridging). Default 5." }
                     },
                     required: ["workingLength"]
                 }

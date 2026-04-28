@@ -88,7 +88,7 @@ sigma = M * y / I_p
 
 **Key behaviour to derive answers from:**
 - L appears inside the secant. As L grows, sec(kL/2) grows EXPONENTIALLY (it goes to infinity as kL/2 approaches π/2). So plate stress rises EXPONENTIALLY with L in bridging — the OPPOSITE of Model 2.
-- Initial offset e and induced deflection delta act in the same direction and ADD. So increasing e amplifies the P-Delta effect linearly at first, then catastrophically when combined with long L.
+- Initial offset e and induced deflection delta act in the same direction and ADD. So increasing e amplifies the P-Delta effect linearly at first, then catastrophically when combined with long L. Note: in the app, `e` is the **periosteum-to-plate** offset (the additional gap), which sits on top of an inherent plate-to-bone-axis offset of ~r_bone + t/2 that is always present in bridging — `e` is never the total eccentricity to the bone's longitudinal axis.
 - This is why the worst-case combination is HIGH offset + LONG working length.
 - Reference values: at L = 120 mm with default constants, delta ≈ 7.08 mm and sigma ≈ 724 MPa (close to the 750 MPa Ti yield reference).
 
@@ -104,10 +104,12 @@ sigma = M * y / I_p
 - 90° (orthogonal) plate setups: ultra-stiff against buckling. Risk: significant fatigue penalty from skew bending stress risers (FEA-confirmed).
 
 ### Tab 4 — Offset & Bending
-- Locking plates often sit off the periosteum to preserve blood supply, creating offset e.
-- In bridging (Model 3), e and delta are additive — offset directly amplifies the P-Delta effect.
-- Worst combination: high e + long L.
-- Optimal starting condition: e = 0 (periosteal contact), no baseline moment.
+- In bridging osteosynthesis the plate is **never** placed on the bone's longitudinal axis. There is always an inherent eccentricity of roughly r_bone + t/2 between the load path (bone axis) and the plate centroid. This baseline offset cannot be eliminated.
+- On top of that baseline, locking plates often sit off the periosteum to preserve blood supply. The Tab 4 slider labels this **additional** periosteum-to-plate distance `e`. So `e` in the app = the extra periosteum-plate gap, **not** the total plate-to-bone-axis distance.
+- Therefore `e = 0` means the plate is flush against the periosteum (the additional offset is zero) — it does **not** mean zero baseline bending moment. The inherent r_bone + t/2 lever arm still produces a baseline moment of roughly P × (r_bone + t/2).
+- In bridging (Model 3), `e` and the induced deflection delta are additive — every extra millimetre of periosteum-plate offset stacks on top of the inherent bone-axis offset and amplifies the P-Delta effect.
+- Worst combination: high additional `e` + long L.
+- Optimal **achievable** starting condition: `e = 0` (periosteal contact). This minimises — but does not zero — the baseline moment.
 
 ### Tab 5 — DCP vs LCP Mechanics
 *Based on MacLeod, Simpson & Pankaj (2015).*
