@@ -193,6 +193,18 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             };
         }
 
+        // Hard wall-clock cap on the entire PubMed lookup (esearch + esummary).
+        // NCBI eutils latency is bimodal — usually <2 s but occasionally
+        // 8–15 s under load. Two sequential round-trips with no cap was
+        // observed to single-handedly push Opus turns past the 24 s
+        // Anthropic ceiling, surfacing as the user-visible
+        // "Anthropic API call timed out after 24000 ms" error. 6 s leaves
+        // ample headroom for typical NCBI responses and bounds worst-case
+        // damage. On timeout the prefetch is treated as a soft failure
+        // (the model's own `search_pubmed` tool remains available as a
+        // fallback if the model decides it really needs hits).
+        const PUBMED_TIMEOUT_MS = 6000;
+
         async function runSearchPubmed(args) {
             const query = (args && typeof args.query === "string") ? args.query.trim() : "";
             if (!query) {
@@ -207,6 +219,11 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                 email: "noreply@osteo-locked-plating.app"
             };
 
+            // One AbortController for the whole esearch + esummary chain
+            // so the cap covers the combined wall time rather than per-leg.
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), PUBMED_TIMEOUT_MS);
+
             try {
                 const esearchParams = new URLSearchParams({
                     db: "pubmed",
@@ -216,7 +233,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     sort: "relevance",
                     ...ncbiIdentity
                 });
-                const esearchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${esearchParams.toString()}`);
+                const esearchRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${esearchParams.toString()}`, { signal: controller.signal });
                 if (!esearchRes.ok) {
                     return { error: `PubMed esearch failed with HTTP ${esearchRes.status}.` };
                 }
@@ -232,7 +249,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     retmode: "json",
                     ...ncbiIdentity
                 });
-                const esumRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${esumParams.toString()}`);
+                const esumRes = await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${esumParams.toString()}`, { signal: controller.signal });
                 if (!esumRes.ok) {
                     return { error: `PubMed esummary failed with HTTP ${esumRes.status}.` };
                 }
@@ -262,7 +279,12 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
 
                 return { query, results: records };
             } catch (err) {
+                if (err && err.name === "AbortError") {
+                    return { error: `PubMed lookup timed out after ${PUBMED_TIMEOUT_MS} ms.` };
+                }
                 return { error: `PubMed lookup threw an exception: ${err && err.message ? err.message : String(err)}` };
+            } finally {
+                clearTimeout(timeoutId);
             }
         }
 
@@ -485,28 +507,33 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         let prefetchedPubmedJSON = null;
         let prefetchedPubmedQuery = '';
 
-        // Skip the PubMed prefetch entirely on Sonnet lit-meta turns.
-        // Two reasons:
-        //   1. Latency. The prefetch is a synchronous NCBI eutils
-        //      round-trip BEFORE we ever call Anthropic. Empirically
-        //      this can add several seconds on its own and was a
-        //      significant contributor to the 24 s Anthropic timeout
-        //      observed on lit-meta follow-ups even after disabling
-        //      adaptive thinking on Sonnet.
-        //   2. Irrelevance. Pure literature meta-questions ("are there
-        //      contradictory findings in the literature on X?", "what
-        //      did Stoffel say about Y?") are answered from the
-        //      curated <app_literature> block, which IS the bot's
-        //      "personal library" per the LITERATURE PROTOCOL. Live
-        //      PubMed hits are not required for that synthesis and
-        //      the existing renderInstruction would tell the model
-        //      not to render them anyway (since lit-meta turns rarely
-        //      satisfy LITERATURE_REQUEST in a way that demands a
-        //      formal **PubMed (live):** list — and when they do, the
-        //      curated library is the authoritative source).
-        // Opus turns (everything else) are unchanged — they still
-        // prefetch so **Broader context** stays grounded.
-        if (isSubstantive && !routeToSonnet) {
+        // Run the PubMed prefetch ONLY when:
+        //   • the turn is substantive (skip greetings / "thanks");
+        //   • we are NOT routing to Sonnet (Sonnet lit-meta turns
+        //     answer from <app_literature> only — see commit history); and
+        //   • the user has explicitly asked for references / evidence /
+        //     citations on this turn.
+        //
+        // Why the userAskedForReferences gate (added to fix Opus turns
+        // also breaching the 24 s Anthropic ceiling): when the user has
+        // NOT asked for refs, the existing renderInstruction tells the
+        // model to use the prefetched hits silently as "Broader context"
+        // grounding only — never to render them. But the curated
+        // <app_literature> block already grounds Broader context, so the
+        // live PubMed hits are nice-to-have decoration, not load-bearing
+        // content. They are NOT worth a 5–10 s synchronous NCBI eutils
+        // round-trip on every biomechanical-reasoning turn — that round
+        // trip plus Opus's adaptive thinking on a ~70 KB system prompt
+        // was empirically pushing total wall time past 24 s and surfacing
+        // as the user-visible "Sorry, I encountered an error" toast on
+        // the very first message of a session.
+        //
+        // When the user DOES ask for refs we still prefetch (subject to
+        // the 6 s PUBMED_TIMEOUT_MS) so the model can render the formal
+        // **PubMed (live):** citation list in a single Anthropic call.
+        // If the prefetch times out, the model falls back to its own
+        // `search_pubmed` tool — slower but correct.
+        if (isSubstantive && !routeToSonnet && userAskedForReferences) {
             prefetchedPubmedQuery = buildPubmedQuery(messages);
             if (prefetchedPubmedQuery) {
                 try {
