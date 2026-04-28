@@ -300,20 +300,36 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // function limit, surfacing as either a "Network error" toast or
             // a reply truncated mid-sentence in the chat UI.
             const effortLevel = effort === "high" ? "high" : "low";
+            const chosenModel = model || "claude-opus-4-7";
+            // Sonnet 4.6 is only routed here for pure-literature meta-questions
+            // (see isPureLiteratureMetaQuestion). Empirically those replies are
+            // short (a paragraph + a citation list) and the model does NOT need
+            // extended reasoning to synthesise <app_literature> + the prefetched
+            // PubMed JSON. Adaptive thinking on a ~70 KB system prompt was
+            // observed to push Sonnet past Anthropic's 24 s ceiling
+            // ("Anthropic API call timed out after 24000 ms"), defeating the
+            // whole point of routing away from Opus. So for Sonnet turns we
+            // disable adaptive thinking entirely and cap max_tokens at a value
+            // comfortably above any realistic lit-meta reply. Opus turns keep
+            // the original adaptive-thinking + 16k budget — they're slower by
+            // design but they handle the biomechanical reasoning load.
+            const isFastLitTurn = /sonnet/i.test(chosenModel);
             const body = {
-                model: model || "claude-opus-4-7",
+                model: chosenModel,
                 // Adaptive thinking tokens are billed against `max_tokens`,
                 // so a long internal reasoning pass can leave very little
                 // headroom for the actual reply and surface as a reply that
                 // truncates mid-sentence (e.g. "Literature: The curated app
                 // library ("). Give the response budget meaningful room.
-                max_tokens: 16000,
+                max_tokens: isFastLitTurn ? 4096 : 16000,
                 system: systemOverride || systemPrompt,
                 tools: toolsOverride || tools,
-                messages: messageHistory,
-                thinking: { type: "adaptive" },
-                output_config: { effort: effortLevel }
+                messages: messageHistory
             };
+            if (!isFastLitTurn) {
+                body.thinking = { type: "adaptive" };
+                body.output_config = { effort: effortLevel };
+            }
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
