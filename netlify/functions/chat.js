@@ -148,7 +148,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                         workingLength: { type: "number", description: "Unsupported working length L in mm (e.g., 60)." },
                         plateAMI: { type: "number", description: "Plate Area Moment of Inertia I_p in mm^4. Default 25." },
                         axialLoad: { type: "number", description: "Axial load P in Newtons. Default 1000." },
-                        offset: { type: "number", description: "Periosteum-to-plate offset e in mm (the additional gap on top of the inherent plate-to-bone-axis eccentricity that is always present in bridging). Default 5." }
+                        offset: { type: "number", description: "Total bone-axis-to-plate eccentricity e in mm used by the secant formula (≈ r_bone + t/2 + any periosteum-plate gap). This is the geometric perpendicular distance from the line of action of the axial load to the plate centroid; it is always > 0 in bridging and cannot be reduced to zero by plate-bone contact. Default 5." }
                     },
                     required: ["workingLength"]
                 }

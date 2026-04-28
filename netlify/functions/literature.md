@@ -468,7 +468,7 @@ When the user asks for literature/evidence/references, the bot:
     - Plate material: 2.4 mm LCP (titanium)
     - Screw configuration: 2 vs 5 screws per fragment
     - Bone model: canine cadaveric femora
-- **Model relevance:** Model 3 (P-Delta) — bridging working-length study; counterpoint to Stoffel/Hoffmeier when plate is in contact with bone.
+- **Model relevance:** Model 3 (P-Delta) — bridging working-length study; counterpoint to Stoffel/Hoffmeier. Note: the null result is NOT explained by `e → 0` collapsing the P-Delta secant term. The geometric eccentricity between the bone's longitudinal axis and the plate centroid (~r_bone + t/2) persists even with the plate in contact with bone, so `e > 0` always. Plausible reasons for Chao's null result lie elsewhere — small 2.4 mm plate, modest applied load keeping `kL/2` in the linear regime of the secant, plate-bone friction adding an unmodelled boundary stiffness, and a fatigue-life endpoint that can diverge from peak plate stress.
 
 ### Wall 2012
 - **Citation:** Wall LB, Brodt MD, Silva MJ, Boyer MI, Calfee RP. The effects of screw length on stability of simulated osteoporotic distal radius fractures fixed with volar locking plates. J Hand Surg Am. 2012;37(3):446-453. PMID: 22305729.
