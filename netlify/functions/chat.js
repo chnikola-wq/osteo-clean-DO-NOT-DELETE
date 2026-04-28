@@ -475,10 +475,37 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return terms.slice(0, 6).join(' ');
         }
 
+        // Decide routing UP FRONT so we can also use it to gate the
+        // PubMed prefetch (see below). The classifier itself is defined
+        // further down (function declarations are hoisted to the top of
+        // the enclosing function scope).
+        const routeToSonnet = isPureLiteratureMetaQuestion(lastUser);
+
         let prefetchedPubmedJSON = null;
         let prefetchedPubmedQuery = '';
 
-        if (isSubstantive) {
+        // Skip the PubMed prefetch entirely on Sonnet lit-meta turns.
+        // Two reasons:
+        //   1. Latency. The prefetch is a synchronous NCBI eutils
+        //      round-trip BEFORE we ever call Anthropic. Empirically
+        //      this can add several seconds on its own and was a
+        //      significant contributor to the 24 s Anthropic timeout
+        //      observed on lit-meta follow-ups even after disabling
+        //      adaptive thinking on Sonnet.
+        //   2. Irrelevance. Pure literature meta-questions ("are there
+        //      contradictory findings in the literature on X?", "what
+        //      did Stoffel say about Y?") are answered from the
+        //      curated <app_literature> block, which IS the bot's
+        //      "personal library" per the LITERATURE PROTOCOL. Live
+        //      PubMed hits are not required for that synthesis and
+        //      the existing renderInstruction would tell the model
+        //      not to render them anyway (since lit-meta turns rarely
+        //      satisfy LITERATURE_REQUEST in a way that demands a
+        //      formal **PubMed (live):** list — and when they do, the
+        //      curated library is the authoritative source).
+        // Opus turns (everything else) are unchanged — they still
+        // prefetch so **Broader context** stays grounded.
+        if (isSubstantive && !routeToSonnet) {
             prefetchedPubmedQuery = buildPubmedQuery(messages);
             if (prefetchedPubmedQuery) {
                 try {
@@ -491,15 +518,35 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             }
         }
 
-        // Build the system prompt for this turn, injecting pre-fetched
-        // PubMed results when available so Claude can answer in one call.
-        let firstCallSystem = systemPrompt;
-        if (prefetchedPubmedJSON) {
-            const renderInstruction = userAskedForReferences
-                ? `The user explicitly asked for references / evidence / citations on this turn, so RENDER the **PubMed (live):** section using these hits (per LITERATURE PROTOCOL §E.4) in addition to using them as grounding for **Broader context**.`
-                : `The user did NOT explicitly ask for references on this turn, so DO NOT render a **PubMed (live):** section. Use these hits SILENTLY as grounding for **Broader context** only — you may refer to them generically (e.g. "a recent PubMed entry on bridge plating in torsion") without producing the formal citation list.`;
-            firstCallSystem = systemPrompt +
-                `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched server-side for this turn (see above). ${renderInstruction} Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
+        // Build the system prompt for this turn.
+        //
+        // For Sonnet lit-meta turns we drop the <app_documentation>
+        // block entirely. That ~11 KB chunk contains the biomechanical
+        // formulas, model derivations, and Tab/Concept references that
+        // are critical for Opus's reasoning turns but irrelevant to a
+        // pure literature-meta synthesis (which only needs
+        // <app_literature> + the LITERATURE PROTOCOL section). Removing
+        // it both speeds up Sonnet's prompt processing and stops the
+        // model from spuriously dragging biomech reasoning into a
+        // lit-meta reply.
+        //
+        // For Opus turns the prompt is unchanged, and we still inject
+        // the prefetched PubMed JSON when present.
+        let firstCallSystem;
+        if (routeToSonnet) {
+            firstCallSystem = systemPrompt.replace(
+                /<app_documentation>[\s\S]*?<\/app_documentation>\n*/,
+                ''
+            );
+        } else {
+            firstCallSystem = systemPrompt;
+            if (prefetchedPubmedJSON) {
+                const renderInstruction = userAskedForReferences
+                    ? `The user explicitly asked for references / evidence / citations on this turn, so RENDER the **PubMed (live):** section using these hits (per LITERATURE PROTOCOL §E.4) in addition to using them as grounding for **Broader context**.`
+                    : `The user did NOT explicitly ask for references on this turn, so DO NOT render a **PubMed (live):** section. Use these hits SILENTLY as grounding for **Broader context** only — you may refer to them generically (e.g. "a recent PubMed entry on bridge plating in torsion") without producing the formal citation list.`;
+                firstCallSystem = systemPrompt +
+                    `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched server-side for this turn (see above). ${renderInstruction} Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
+            }
         }
 
         // Always run at "low" effort. `output_config.effort` is a CEILING
@@ -593,15 +640,15 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return LIT_META_CUES.test(t);
         }
 
-        const routeToSonnet = isPureLiteratureMetaQuestion(lastUser);
-        // Sonnet 4.6 has its own quirks with the `tools` API and tends
-        // to be more eager to call `search_pubmed` than Opus. Since we
-        // already inject the prefetched PubMed JSON into its system
-        // prompt, omit `search_pubmed` from its tools entirely so it
-        // can't add a tool-loop iteration to a model we chose
-        // specifically to be fast. `calculate_bridging_stress` is also
-        // dropped — pure-lit meta-questions never need it, and a
-        // spurious tool call would defeat the latency win.
+        // routeToSonnet was computed earlier so it could also gate the
+        // PubMed prefetch. Sonnet 4.6 has its own quirks with the
+        // `tools` API and tends to be more eager to call `search_pubmed`
+        // than Opus. We skip the prefetch on Sonnet turns AND we omit
+        // `search_pubmed` from its tools entirely so it can't add a
+        // tool-loop iteration to a model we chose specifically to be
+        // fast. `calculate_bridging_stress` is also dropped — pure-lit
+        // meta-questions never need it, and a spurious tool call would
+        // defeat the latency win.
         const turnModel = routeToSonnet ? "claude-sonnet-4-6" : "claude-opus-4-7";
         const turnTools = routeToSonnet ? [] : tools;
 
