@@ -524,7 +524,47 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // failing transcript turn "are there contradictory findings
             // in the literature regarding working length?" mentions
             // "working length" but is fundamentally a lit-meta query).
-            const STRONG_LIT_META = /(what (does|do|did) (the )?(literature|research|evidence|studies?|papers?|sources?)|what (literature|papers?|studies|research|sources?|references?|citations?) (did|do|have|are)|in the (literature|published evidence|published research)\b|any (studies|papers|research|trials?) on\b|is there (a |any )?(study|paper|research|literature|trial|evidence)|are there (any )?(contradictory|conflicting|consistent|published)?\s*(findings|studies|papers|results|trials?|reports?|data) (in|from|across|on|regarding|about)|contradictory (findings|results|evidence|reports?|literature)|conflicting (findings|results|evidence|reports?|literature)|consensus (in|of|across) (the )?(literature|evidence|studies)|where (did|does).*(come|from)|show me your sources|cite (your |that |the )|what (papers?|sources?|references?) did you (use|cite)|what did (the )?(authors?|stoffel|hoffmeier|bonyun|gardner|bottlang|gautier|perren|egol|wagner) (say|find|conclude|report|show)|what (does|do) (stoffel|hoffmeier|bonyun|gardner|bottlang|gautier|perren|egol|wagner)(\s+\(?\d{2,4}\)?)?\s+(say|find|conclude|report|show|argue|claim))/;
+            //
+            // Built from a few smaller named patterns instead of one
+            // monster regex, so each tier can be edited or extended
+            // without rewriting the whole expression. Author list lives
+            // in one place; add to KNOWN_AUTHORS as the curated library
+            // grows.
+            const KNOWN_AUTHORS = [
+                "stoffel", "hoffmeier", "bonyun", "gardner",
+                "bottlang", "gautier", "perren", "egol", "wagner"
+            ];
+            const AUTHORS_RE = `(?:authors?|${KNOWN_AUTHORS.join("|")})`;
+            const STRONG_LIT_META_PARTS = [
+                // "what does/do/did the literature/research/etc say"
+                String.raw`what (?:does|do|did) (?:the )?(?:literature|research|evidence|studies?|papers?|sources?)`,
+                // "what literature/papers/etc did you use/cite"
+                String.raw`what (?:literature|papers?|studies|research|sources?|references?|citations?) (?:did|do|have|are)`,
+                // "in the literature, ..."
+                String.raw`in the (?:literature|published evidence|published research)\b`,
+                // "any studies/papers on ..."
+                String.raw`any (?:studies|papers|research|trials?) on\b`,
+                // "is there a study/paper/etc"
+                String.raw`is there (?:a |any )?(?:study|paper|research|literature|trial|evidence)`,
+                // "are there [contradictory|conflicting|...] findings/results in the literature ..."
+                String.raw`are there (?:any )?(?:contradictory|conflicting|consistent|published)?\s*(?:findings|studies|papers|results|trials?|reports?|data) (?:in|from|across|on|regarding|about)`,
+                // bare "contradictory/conflicting findings/results/literature"
+                String.raw`(?:contradictory|conflicting) (?:findings|results|evidence|reports?|literature)`,
+                // "consensus in/of/across the literature/evidence/studies"
+                String.raw`consensus (?:in|of|across) (?:the )?(?:literature|evidence|studies)`,
+                // "where did that come from"
+                String.raw`where (?:did|does).*(?:come|from)`,
+                // "show me your sources" / "cite the/that/your ..."
+                String.raw`show me your sources`,
+                String.raw`cite (?:your |that |the )`,
+                // "what papers/sources/references did you use/cite"
+                String.raw`what (?:papers?|sources?|references?) did you (?:use|cite)`,
+                // "what did <author> say/find/conclude/..."
+                String.raw`what did (?:the )?` + AUTHORS_RE + String.raw` (?:say|find|conclude|report|show)`,
+                // "what does <author> [year] say/find/..."
+                String.raw`what (?:does|do) ` + AUTHORS_RE + String.raw`(?:\s+\(?\d{2,4}\)?)?\s+(?:say|find|conclude|report|show|argue|claim)`
+            ];
+            const STRONG_LIT_META = new RegExp("(?:" + STRONG_LIT_META_PARTS.join("|") + ")");
             if (STRONG_LIT_META.test(t)) return true;
             // Otherwise fall back to the conservative rule: a literature
             // cue MUST be present AND no biomechanical-reasoning cue
