@@ -278,13 +278,15 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         }
 
         // Netlify's hard cap on synchronous functions is 26 s. We abort the
-        // upstream Anthropic call a few seconds before that so the function
-        // can return a structured JSON error (which the UI surfaces as
-        // "Sorry, encountered an error… (timed out)") instead of letting
+        // upstream Anthropic call a couple of seconds before that so the
+        // function can return a structured JSON error (which the UI surfaces
+        // as "Sorry, encountered an error… (timed out)") instead of letting
         // Netlify kill the lambda and hand the browser an HTML 504 — which
         // would crash `response.json()` on the client and surface the
         // misleading generic "Network error. Please try again." toast.
-        const ANTHROPIC_TIMEOUT_MS = 22000;
+        // 24 s leaves ~2 s of headroom for our own JSON serialisation and
+        // the Lambda response round-trip.
+        const ANTHROPIC_TIMEOUT_MS = 24000;
 
         async function callClaude(messageHistory, { effort, systemOverride } = {}) {
             // Claude Opus 4.7 replaced the legacy
