@@ -1468,7 +1468,13 @@
                 setIsLoading(true);
 
                 try {
-                    // Send message to our secure Netlify Function
+                    // Send message to our secure Netlify Function. The
+                    // function streams its reply back as Server-Sent
+                    // Events so the user sees tokens arrive in real time
+                    // (and so we are no longer bound by Netlify's 26 s
+                    // synchronous-function cap — streaming responses
+                    // fall under the much longer streaming cap as long
+                    // as bytes keep flowing).
                     const apiMessages = newMessages.filter(m => m.role !== 'system');
                     // Anthropic requires the first message to be from 'user'.
                     // Drop any leading assistant messages (e.g. the display-only greeting).
@@ -1479,16 +1485,113 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ messages: trimmedMessages })
                     });
-                    
-                    const data = await response.json();
-                    if (data.reply) {
-                        setMessages([...newMessages, { role: "assistant", content: data.reply }]);
-                    } else {
-                        const detail = data.error ? `\n\n*(${data.error})*` : '';
+
+                    // Pre-stream errors (e.g. missing API key, malformed
+                    // body) still come back as a regular JSON response.
+                    const contentType = response.headers.get('content-type') || '';
+                    if (!response.ok || !contentType.includes('text/event-stream')) {
+                        let detail = '';
+                        try {
+                            const data = await response.json();
+                            if (data && data.error) detail = `\n\n*(${data.error})*`;
+                        } catch (_) {}
                         setMessages([...newMessages, { role: "assistant", content: `Sorry, I encountered an error. Please try again.${detail}` }]);
+                        return;
+                    }
+
+                    // Append a placeholder assistant message that we
+                    // mutate as deltas arrive. We track its index so
+                    // 'reset' events can clear just this bubble.
+                    let assistantText = '';
+                    const assistantIdx = newMessages.length;
+                    setMessages([...newMessages, { role: "assistant", content: '' }]);
+
+                    const updateAssistant = (next) => {
+                        assistantText = next;
+                        setMessages(prev => {
+                            const copy = prev.slice();
+                            copy[assistantIdx] = { role: "assistant", content: assistantText };
+                            return copy;
+                        });
+                    };
+
+                    // SSE reader. Frames are delimited by a blank line;
+                    // a frame may span multiple network chunks, so we
+                    // buffer until we see the delimiter.
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let streamErrorMessage = null;
+                    let sawDone = false;
+
+                    outer: while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+
+                        let frameEnd;
+                        while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+                            const rawFrame = buffer.slice(0, frameEnd);
+                            buffer = buffer.slice(frameEnd + 2);
+
+                            let dataPayload = '';
+                            for (const line of rawFrame.split('\n')) {
+                                if (line.startsWith('data: ')) dataPayload += line.slice(6);
+                                else if (line.startsWith('data:')) dataPayload += line.slice(5);
+                            }
+                            if (!dataPayload) continue;
+
+                            let evt;
+                            try { evt = JSON.parse(dataPayload); } catch { continue; }
+
+                            if (evt.type === 'text' && typeof evt.text === 'string') {
+                                updateAssistant(assistantText + evt.text);
+                            } else if (evt.type === 'reset') {
+                                // Pre-tool-call reasoning we just streamed
+                                // wasn't the final answer — clear the bubble
+                                // and wait for the next streamed turn.
+                                updateAssistant('');
+                            } else if (evt.type === 'error') {
+                                streamErrorMessage = evt.error || 'unknown error';
+                                break outer;
+                            } else if (evt.type === 'done') {
+                                sawDone = true;
+                                break outer;
+                            }
+                        }
+                    }
+
+                    if (streamErrorMessage) {
+                        const detail = `\n\n*(${streamErrorMessage})*`;
+                        // Replace the in-flight bubble with the error message.
+                        setMessages(prev => {
+                            const copy = prev.slice();
+                            copy[assistantIdx] = { role: "assistant", content: `Sorry, I encountered an error. Please try again.${detail}` };
+                            return copy;
+                        });
+                    } else if (!sawDone && !assistantText) {
+                        // Stream ended without either a 'done' event or any
+                        // text — surface as an error so the user isn't left
+                        // staring at an empty bubble.
+                        setMessages(prev => {
+                            const copy = prev.slice();
+                            copy[assistantIdx] = { role: "assistant", content: "Sorry, I encountered an error. Please try again.\n\n*(empty response)*" };
+                            return copy;
+                        });
                     }
                 } catch (error) {
-                    setMessages([...newMessages, { role: "assistant", content: "Network error. Please try again." }]);
+                    setMessages(prev => {
+                        // Either we hadn't appended the placeholder yet
+                        // (early failure) or we had — handle both.
+                        const baseLen = newMessages.length;
+                        const copy = prev.slice();
+                        if (copy.length > baseLen) {
+                            copy[baseLen] = { role: "assistant", content: "Network error. Please try again." };
+                        } else {
+                            copy.push({ role: "assistant", content: "Network error. Please try again." });
+                        }
+                        return copy;
+                    });
                 }
                 setIsLoading(false);
             };

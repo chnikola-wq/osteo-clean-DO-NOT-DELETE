@@ -31,16 +31,41 @@ try {
     appLiterature = '(Literature library failed to load — treat the curated library as empty for this session.)';
 }
 
-exports.handler = async function(event, context) {
-    if (event.httpMethod !== "POST") {
-        return { statusCode: 405, body: "Method Not Allowed" };
+// ============================================================
+// Netlify Functions v2 handler (streaming).
+//
+// We deliberately use the v2 `(req, context) => Response` signature
+// rather than the legacy `exports.handler = (event, context)` form
+// because v2 is the only path on Netlify that supports a streaming
+// response body. Streaming bypasses the 26 s synchronous-function
+// idle cap (the limit becomes the streaming cap, currently 15 min)
+// AND lets the user see Claude's tokens as they arrive instead of
+// waiting for the full reply. A v1 handler returns a buffered
+// `{statusCode, body}` envelope and cannot stream.
+// ============================================================
+module.exports = async function(req, context) {
+    if (req.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    let parsedBody;
+    try {
+        parsedBody = await req.json();
+    } catch (err) {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     try {
-        const { messages } = JSON.parse(event.body);
+        const { messages } = parsedBody;
         const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-            return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set.' }) };
+            return new Response(
+                JSON.stringify({ error: 'ANTHROPIC_API_KEY environment variable is not set.' }),
+                { status: 500, headers: { 'Content-Type': 'application/json' } }
+            );
         }
 
         // ============================================================
@@ -299,18 +324,129 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             return { error: `Unknown tool: ${name}` };
         }
 
-        // Netlify's hard cap on synchronous functions is 26 s. We abort the
-        // upstream Anthropic call a couple of seconds before that so the
-        // function can return a structured JSON error (which the UI surfaces
-        // as "Sorry, encountered an error… (timed out)") instead of letting
-        // Netlify kill the lambda and hand the browser an HTML 504 — which
-        // would crash `response.json()` on the client and surface the
-        // misleading generic "Network error. Please try again." toast.
-        // 24 s leaves ~2 s of headroom for our own JSON serialisation and
-        // the Lambda response round-trip.
-        const ANTHROPIC_TIMEOUT_MS = 24000;
+        // We no longer impose a synchronous Anthropic-side timeout. The
+        // function now streams its response (Netlify Functions v2), which
+        // moves us off the 26 s idle cap onto the streaming cap (~15 min)
+        // — and Anthropic's stream itself emits `ping` events during
+        // extended thinking, so the connection never goes idle as long
+        // as the model is still producing. A bounded absolute ceiling is
+        // kept as a defence-in-depth against a hung upstream socket.
+        const ANTHROPIC_ABSOLUTE_CAP_MS = 5 * 60 * 1000;
 
-        async function callClaude(messageHistory, { effort, systemOverride, model, toolsOverride } = {}) {
+        // ============================================================
+        // Anthropic SSE PARSER
+        // ------------------------------------------------------------
+        // Reads a streamed `messages` response from Anthropic, forwards
+        // each `text_delta` straight to the client via `onTextDelta`,
+        // and reconstructs the full assistant `content` array
+        // (text / thinking / tool_use blocks, with their signatures
+        // and parsed `input`) so it can be replayed back into the next
+        // tool-loop iteration. Returns `{ assistantContent, stopReason }`.
+        // ============================================================
+        async function parseAnthropicStream(bodyStream, onTextDelta) {
+            const reader = bodyStream.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            const blocks = [];                // assistant content blocks, indexed
+            const toolJsonBuffers = {};       // index -> accumulated partial_json string
+            let stopReason = null;
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE frames are delimited by a blank line ("\n\n").
+                let frameEnd;
+                while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+                    const rawFrame = buffer.slice(0, frameEnd);
+                    buffer = buffer.slice(frameEnd + 2);
+
+                    // A frame contains one or more "field: value" lines.
+                    // We only care about the `data:` lines (concatenated
+                    // when multiple are present, per the SSE spec).
+                    let dataPayload = '';
+                    for (const line of rawFrame.split('\n')) {
+                        if (line.startsWith('data: ')) dataPayload += line.slice(6);
+                        else if (line.startsWith('data:')) dataPayload += line.slice(5);
+                    }
+                    if (!dataPayload || dataPayload === '[DONE]') continue;
+
+                    let evt;
+                    try { evt = JSON.parse(dataPayload); } catch { continue; }
+
+                    switch (evt.type) {
+                        case 'content_block_start': {
+                            const idx = evt.index;
+                            const cb = evt.content_block || {};
+                            // Shallow copy so we can mutate.
+                            blocks[idx] = { ...cb };
+                            if (cb.type === 'tool_use') {
+                                toolJsonBuffers[idx] = '';
+                                if (typeof blocks[idx].input !== 'object' || blocks[idx].input === null) {
+                                    blocks[idx].input = {};
+                                }
+                            } else if (cb.type === 'text') {
+                                if (typeof blocks[idx].text !== 'string') blocks[idx].text = '';
+                            } else if (cb.type === 'thinking') {
+                                if (typeof blocks[idx].thinking !== 'string') blocks[idx].thinking = '';
+                            }
+                            break;
+                        }
+                        case 'content_block_delta': {
+                            const idx = evt.index;
+                            const delta = evt.delta || {};
+                            const block = blocks[idx];
+                            if (delta.type === 'text_delta') {
+                                if (block) block.text = (block.text || '') + (delta.text || '');
+                                if (delta.text) onTextDelta(delta.text);
+                            } else if (delta.type === 'input_json_delta') {
+                                toolJsonBuffers[idx] = (toolJsonBuffers[idx] || '') + (delta.partial_json || '');
+                            } else if (delta.type === 'thinking_delta') {
+                                if (block) block.thinking = (block.thinking || '') + (delta.thinking || '');
+                            } else if (delta.type === 'signature_delta') {
+                                if (block) block.signature = (block.signature || '') + (delta.signature || '');
+                            }
+                            break;
+                        }
+                        case 'content_block_stop': {
+                            const idx = evt.index;
+                            const block = blocks[idx];
+                            if (block && block.type === 'tool_use') {
+                                const raw = toolJsonBuffers[idx] || '';
+                                try {
+                                    block.input = raw ? JSON.parse(raw) : {};
+                                } catch (e) {
+                                    block.input = {};
+                                }
+                            }
+                            break;
+                        }
+                        case 'message_delta': {
+                            if (evt.delta && evt.delta.stop_reason) {
+                                stopReason = evt.delta.stop_reason;
+                            }
+                            break;
+                        }
+                        case 'message_stop':
+                        case 'message_start':
+                        case 'ping':
+                            // nothing to do
+                            break;
+                        case 'error': {
+                            const msg = (evt.error && evt.error.message) || 'unknown stream error';
+                            throw new Error(`Anthropic stream error: ${msg}`);
+                        }
+                    }
+                }
+            }
+
+            // Drop any holes (shouldn't happen, but be defensive).
+            const assistantContent = blocks.filter(Boolean);
+            return { assistantContent, stopReason };
+        }
+
+        async function streamClaude(messageHistory, { effort, systemOverride, model, toolsOverride, onTextDelta } = {}) {
             // Claude Opus 4.7 replaced the legacy
             // `thinking: { type: "enabled", budget_tokens: N }` contract with
             // `thinking: { type: "adaptive" }` plus `output_config.effort`.
@@ -318,66 +454,51 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
             // scales up on its own when the prompt warrants it. We pin it to
             // "low" here because the system prompt is large (app knowledge +
             // literature library + injected PubMed JSON on every substantive
-            // turn) and "high" pushes total latency past Netlify's 26 s
-            // function limit, surfacing as either a "Network error" toast or
-            // a reply truncated mid-sentence in the chat UI.
+            // turn) and "high" produces noticeably longer time-to-first-token
+            // even with streaming on.
             const effortLevel = effort === "high" ? "high" : "low";
             const chosenModel = model || "claude-opus-4-7";
             // Sonnet 4.6 is only routed here for pure-literature meta-questions
             // (see isPureLiteratureMetaQuestion). Empirically those replies are
             // short (a paragraph + a citation list) and the model does NOT need
             // extended reasoning to synthesise <app_literature> + the prefetched
-            // PubMed JSON. Adaptive thinking on a ~70 KB system prompt was
-            // observed to push Sonnet past Anthropic's 24 s ceiling
-            // ("Anthropic API call timed out after 24000 ms"), defeating the
-            // whole point of routing away from Opus. So for Sonnet turns we
-            // disable adaptive thinking entirely and cap max_tokens at a value
-            // comfortably above any realistic lit-meta reply. Opus turns keep
-            // the adaptive-thinking budget — they're slower by design but
-            // they handle the biomechanical reasoning load.
+            // PubMed JSON. So for Sonnet turns we disable adaptive thinking
+            // entirely and cap max_tokens at a value comfortably above any
+            // realistic lit-meta reply. Opus turns keep the adaptive-thinking
+            // budget — they're slower by design but they handle the
+            // biomechanical reasoning load.
             const isFastLitTurn = /sonnet/i.test(chosenModel);
             const body = {
                 model: chosenModel,
                 // `max_tokens` is the combined ceiling on (adaptive thinking
-                // tokens + visible reply tokens). It is therefore also the
-                // de-facto wall-time cap on the upstream Anthropic call:
-                // higher `max_tokens` lets adaptive thinking run longer
-                // before the model is forced to commit to a reply.
+                // tokens + visible reply tokens). Opus 4.7 reply lengths in
+                // this app are empirically 600–1500 visible tokens; 8192
+                // leaves ~6 K headroom for adaptive thinking on
+                // `effort: "low"`. If thinking does overrun the budget
+                // Anthropic returns a clean `stop_reason: "max_tokens"`.
                 //
-                // Opus 4.7 reply lengths in this app are empirically
-                // 600–1500 visible tokens (see the curated transcripts in
-                // app-knowledge.md and the literature synthesis turns).
-                // 8192 leaves ~6 K headroom for adaptive thinking on
-                // `effort: "low"`, which is plenty for the synthesis turns
-                // we observe — and bounds worst-case wall time so deep
-                // multi-turn synthesis questions ("how do all these
-                // combine?") stop breaching Anthropic's 24 s ceiling. The
-                // previous 16 000 ceiling let adaptive thinking run long
-                // enough that even with PubMed prefetch removed from the
-                // critical path, total round-trip exceeded 24 s and the
-                // user saw the "Anthropic API call timed out" toast on
-                // turn 3+ of biomech-reasoning sessions. If thinking does
-                // overrun the budget Anthropic returns a clean
-                // `stop_reason: "max_tokens"` (which the model handles by
-                // ending the reply) rather than the lambda dying mid-
-                // stream — graceful degradation vs hard timeout.
-                //
-                // Sonnet lit-meta turns keep their 4 K budget — they have
-                // adaptive thinking disabled entirely (see below) so the
-                // whole budget is reply tokens, and 4 K is well above any
-                // realistic lit-meta reply length.
+                // Sonnet lit-meta turns have adaptive thinking disabled
+                // entirely (see below) so the whole budget is reply tokens,
+                // and 4 K is well above any realistic lit-meta reply length.
                 max_tokens: isFastLitTurn ? 4096 : 8192,
                 system: systemOverride || systemPrompt,
                 tools: toolsOverride || tools,
-                messages: messageHistory
+                messages: messageHistory,
+                // SSE streaming. The handler below parses the upstream
+                // event stream and re-emits text deltas to the browser.
+                stream: true
             };
             if (!isFastLitTurn) {
                 body.thinking = { type: "adaptive" };
                 body.output_config = { effort: effortLevel };
             }
 
+            // Defence-in-depth absolute cap on a single Claude call. Under
+            // normal operation streaming keeps the connection alive via
+            // model output + Anthropic `ping` events, so this only fires
+            // if the upstream socket truly hangs.
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
+            const timeoutId = setTimeout(() => controller.abort(), ANTHROPIC_ABSOLUTE_CAP_MS);
             let res;
             try {
                 res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -391,19 +512,24 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
                     signal: controller.signal
                 });
             } catch (err) {
+                clearTimeout(timeoutId);
                 if (err && err.name === "AbortError") {
-                    throw new Error(`Anthropic API call timed out after ${ANTHROPIC_TIMEOUT_MS} ms.`);
+                    throw new Error(`Anthropic API call exceeded absolute cap of ${ANTHROPIC_ABSOLUTE_CAP_MS} ms.`);
                 }
                 throw err;
+            }
+            if (!res.ok) {
+                clearTimeout(timeoutId);
+                let errBody = '';
+                try { errBody = await res.text(); } catch {}
+                const trimmed = errBody.length > 500 ? errBody.slice(0, 500) + '…' : errBody;
+                throw new Error(`Anthropic API error ${res.status}: ${trimmed}`);
+            }
+            try {
+                return await parseAnthropicStream(res.body, onTextDelta || (() => {}));
             } finally {
                 clearTimeout(timeoutId);
             }
-            const json = await res.json();
-            if (!res.ok) {
-                const msg = json?.error?.message || JSON.stringify(json);
-                throw new Error(`Anthropic API error ${res.status}: ${msg}`);
-            }
-            return json;
         }
 
         // ============================================================
@@ -429,7 +555,7 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         // ============================================================
         // The trivial-vs-substantive classifier was previously used to
         // gate `effort: "high"`. We now run every turn at "low" (see
-        // callClaude), so this only feeds the PubMed pre-fetch and the
+        // streamClaude), so this only feeds the PubMed pre-fetch and the
         // citation-rendering decision below.
         // ============================================================
         const lastUser = lastUserText(messages).trim();
@@ -703,69 +829,134 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
         const turnModel = routeToSonnet ? "claude-sonnet-4-6" : "claude-opus-4-7";
         const turnTools = routeToSonnet ? [] : tools;
 
-        let data = await callClaude(messages, {
-            effort,
-            systemOverride: firstCallSystem,
-            model: turnModel,
-            toolsOverride: turnTools
+        // ============================================================
+        // STREAMING RESPONSE
+        // ------------------------------------------------------------
+        // Open an SSE stream to the browser and run the tool loop
+        // inside it. Each Claude call is itself streamed: text deltas
+        // are forwarded straight to the client as
+        // `data: {"type":"text","text":"..."}\n\n` frames, so the user
+        // sees tokens arrive in real time.
+        //
+        // When a turn ends with `stop_reason: "tool_use"` we emit a
+        // `data: {"type":"reset"}\n\n` event so the client can clear
+        // any text it received during that turn (it was the model's
+        // pre-tool-call reasoning, not the final answer) and prepare
+        // for the next streamed turn after the tool call resolves.
+        //
+        // On normal completion we emit `{"type":"done"}`. On any
+        // mid-stream failure we emit `{"type":"error", error}` so the
+        // client can render the same error toast it always has.
+        // ============================================================
+        const encoder = new TextEncoder();
+        const MAX_TOOL_ITERATIONS = 5;
+
+        const responseStream = new ReadableStream({
+            async start(controller) {
+                let closed = false;
+                const send = (obj) => {
+                    if (closed) return;
+                    try {
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+                    } catch (e) {
+                        // controller already closed by client disconnect
+                        closed = true;
+                    }
+                };
+                const onTextDelta = (text) => {
+                    if (text) send({ type: 'text', text });
+                };
+
+                try {
+                    let conversation = messages;
+                    let toolIterations = 0;
+
+                    let result = await streamClaude(conversation, {
+                        effort,
+                        systemOverride: firstCallSystem,
+                        model: turnModel,
+                        toolsOverride: turnTools,
+                        onTextDelta
+                    });
+
+                    while (result.stopReason === "tool_use" && toolIterations < MAX_TOOL_ITERATIONS) {
+                        toolIterations++;
+                        const toolUseBlocks = (result.assistantContent || []).filter(b => b.type === "tool_use");
+                        if (toolUseBlocks.length === 0) break;
+
+                        // The text we just streamed (if any) was the
+                        // model's pre-tool-call reasoning, not the final
+                        // answer. Tell the client to discard it before
+                        // the next streamed turn arrives.
+                        send({ type: 'reset' });
+
+                        const toolResults = [];
+                        for (const tub of toolUseBlocks) {
+                            const r = await dispatchTool(tub.name, tub.input);
+                            toolResults.push({
+                                type: "tool_result",
+                                tool_use_id: tub.id,
+                                content: JSON.stringify(r)
+                            });
+                        }
+
+                        conversation = [
+                            ...conversation,
+                            { role: "assistant", content: result.assistantContent },
+                            { role: "user", content: toolResults }
+                        ];
+
+                        result = await streamClaude(conversation, {
+                            effort,
+                            model: turnModel,
+                            toolsOverride: turnTools,
+                            onTextDelta
+                        });
+                    }
+
+                    const replyText = (result.assistantContent || [])
+                        .filter(b => b.type === "text")
+                        .map(b => b.text)
+                        .join("\n");
+
+                    if (!replyText) {
+                        throw new Error(`No text reply from model. stop_reason=${result.stopReason}`);
+                    }
+
+                    send({ type: 'done' });
+                } catch (err) {
+                    console.error('Stream error:', err);
+                    send({ type: 'error', error: err && err.message ? err.message : String(err) });
+                } finally {
+                    closed = true;
+                    try { controller.close(); } catch {}
+                }
+            }
         });
 
-        // ============================================================
-        // TOOL EXECUTION LOOP
-        // The model may call any combination of tools (calculate_bridging_stress,
-        // search_pubmed) one or more times. Loop until the model stops asking
-        // for tools, with a hard cap to prevent runaway cycles.
-        // ============================================================
-        let conversation = messages;
-        const MAX_TOOL_ITERATIONS = 5;
-        let toolIterations = 0;
-        while (data.stop_reason === "tool_use" && toolIterations < MAX_TOOL_ITERATIONS) {
-            toolIterations++;
-            const toolUseBlocks = (data.content || []).filter(block => block.type === "tool_use");
-            if (toolUseBlocks.length === 0) break;
-
-            const toolResults = [];
-            for (const tub of toolUseBlocks) {
-                const result = await dispatchTool(tub.name, tub.input);
-                toolResults.push({
-                    type: "tool_result",
-                    tool_use_id: tub.id,
-                    content: JSON.stringify(result)
-                });
+        return new Response(responseStream, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/event-stream; charset=utf-8',
+                'Cache-Control': 'no-cache, no-transform',
+                'Connection': 'keep-alive',
+                // Disable proxy buffering so each SSE frame reaches the
+                // browser as soon as it is enqueued (prevents buffering
+                // intermediaries from collapsing token-by-token streaming
+                // into one big chunk at the end).
+                'X-Accel-Buffering': 'no'
             }
-
-            conversation = [
-                ...conversation,
-                { role: "assistant", content: data.content },
-                { role: "user", content: toolResults }
-            ];
-
-            data = await callClaude(conversation, {
-                effort,
-                model: turnModel,
-                toolsOverride: turnTools
-            });
-        }
-
-        const replyText = (data.content || [])
-            .filter(block => block.type === "text")
-            .map(block => block.text)
-            .join("\n");
-
-        if (!replyText) {
-            throw new Error(`No text reply from model. stop_reason=${data.stop_reason}`);
-        }
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ reply: replyText })
-        };
+        });
 
      } catch (error) {
-        console.error('Function error:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message, stack: error.stack })
-        };
+        console.error('Function error (pre-stream):', error);
+        // Do NOT include `error.stack` in the response body — that would
+        // leak filesystem paths and internal call sites to the browser
+        // (CodeQL js/stack-trace-exposure). The full stack is still
+        // captured in the server log above for debugging.
+        return new Response(
+            JSON.stringify({ error: error.message || String(error) }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
     }
 };
