@@ -2649,6 +2649,7 @@ if (typeof window !== 'undefined') {
                             <div id="watermark-cn" className="mt-8 text-center text-xs text-slate-500 dark:text-slate-400 w-full pt-6 border-t border-slate-200 dark:border-slate-800 opacity-100 visible">
                                 <p className="font-bold">Created by Christos Nikolaou</p>
                                 <p className="italic max-w-2xl mx-auto mt-1">For educational and research purposes only. Does not substitute clinical judgement.</p>
+                                <p className="mt-3">© 2026 Christos Nikolaou. All rights reserved. Proprietary &amp; confidential — see <a href="https://github.com/chnikola-wq/osteo-clean-DO-NOT-DELETE/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-700 dark:hover:text-slate-300">LICENSE</a>.</p>
                             </div>
                         </div>
                     </footer>

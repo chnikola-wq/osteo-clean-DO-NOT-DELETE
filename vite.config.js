@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react';
 // has to put copy/reuse on notice.
 const LICENSE_BANNER = `/*!
  * Locked Plating: Clinical Guidelines & Biomechanics
- * Copyright (c) 2026 chnikola-wq. All rights reserved.
+ * Copyright (c) 2026 Christos Nikolaou. All rights reserved.
  *
  * Proprietary and confidential. No license is granted to copy,
  * redistribute, reverse-engineer, de-minify, or use this code (or any
