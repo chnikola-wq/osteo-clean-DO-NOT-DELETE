@@ -477,8 +477,9 @@ Write all formulas using LaTeX math syntax so they render as typeset equations i
 
         // Decide routing UP FRONT so we can also use it to gate the
         // PubMed prefetch (see below). The classifier itself is defined
-        // further down (function declarations are hoisted to the top of
-        // the enclosing function scope).
+        // further down (see `isPureLiteratureMetaQuestion`, ~line 579) —
+        // function declarations are hoisted to the top of the enclosing
+        // function scope, so it's safe to call here.
         const routeToSonnet = isPureLiteratureMetaQuestion(lastUser);
 
         let prefetchedPubmedJSON = null;
