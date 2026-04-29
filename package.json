@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pinecone-database/pinecone": "7.1.0",
     "katex": "0.16.22",
     "marked": "12.0.2",
     "react": "18.3.1",

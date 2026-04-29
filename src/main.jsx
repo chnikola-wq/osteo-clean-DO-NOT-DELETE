@@ -2569,7 +2569,7 @@ if (typeof window !== 'undefined') {
                         <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
                             <div>
                                 <h1 className="text-xl md:text-2xl font-extrabold text-blue-700 dark:text-blue-400 flex items-center gap-2">
-                                    <IconSettings /> Locked Plating: Pre-Operative Primer
+                                    <IconSettings /> Plate Osteosynthesis: A Biomechanical Primer
                                 </h1>
                                 <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium tracking-wide uppercase">
                                     Educational Companion to the V3.8 Stiffness Calculator
