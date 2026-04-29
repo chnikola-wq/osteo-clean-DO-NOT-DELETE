@@ -970,32 +970,70 @@ If a user asks for any of the prohibited disclosures, refuse politely in one sho
         //
         // For Opus turns the prompt is unchanged, and we still inject
         // the prefetched PubMed JSON when present.
-        let firstCallSystem;
-        if (routeToSonnet) {
-            firstCallSystem = systemPrompt.replace(
-                /<app_documentation>[\s\S]*?<\/app_documentation>\n*/,
-                ''
-            );
-        } else {
-            firstCallSystem = systemPrompt;
-            if (prefetchedPubmedJSON) {
-                const renderInstruction = userAskedForReferences
-                    ? `The user explicitly asked for references / evidence / citations on this turn, so RENDER the **PubMed (live):** section using these hits (per LITERATURE PROTOCOL §E.4) in addition to using them as grounding for **Broader context**.`
-                    : `The user did NOT explicitly ask for references on this turn, so DO NOT render a **PubMed (live):** section. Use these hits SILENTLY as grounding for **Broader context** only — you may refer to them generically (e.g. "a recent PubMed entry on bridge plating in torsion") without producing the formal citation list.`;
-                firstCallSystem = systemPrompt +
-                    `\n\n<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched server-side for this turn (see above). ${renderInstruction} Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`;
+        // ============================================================
+        // SYSTEM-PROMPT ASSEMBLY WITH ANTHROPIC PROMPT CACHING
+        // ------------------------------------------------------------
+        // The static system content is ~18 K tokens (system instructions
+        // + <app_documentation> + <app_literature>). Re-sending it on
+        // every turn caused user-visible 429 errors:
+        //   "rate_limit_error … 30,000 input tokens per minute"
+        // on turn 3 of a session, once conversation history had grown
+        // enough that (system × every turn) + (history × every turn)
+        // exceeded Anthropic's per-minute input-token budget.
+        //
+        // Fix: pass `system` as an ARRAY of content blocks and put a
+        // `cache_control: { type: "ephemeral" }` breakpoint at the end
+        // of the large static block. Cache reads are billed at ~10% of
+        // normal input and count against TPM at that rate, which keeps
+        // the rolling-minute total well under the 30 K cap even on long
+        // sessions. The dynamic per-turn additions (PubMed prefetch,
+        // retrieved PDF excerpts) are appended as separate, NON-cached
+        // blocks AFTER the breakpoint so they don't poison the cache.
+        //
+        // The static block must be byte-stable across calls within the
+        // same model route to actually cache-hit. We get that by making
+        // the static block a pure function of `routeToSonnet` (Opus
+        // route uses the full systemPrompt; Sonnet route strips the
+        // <app_documentation> XML block, both deterministic).
+        //
+        // Cache constraints (Anthropic): cached prefix ≥ 1024 tokens
+        // (~4 KB) — we're at ~70 KB, well above. Up to 4 cache
+        // breakpoints; we use exactly 1.
+        // ============================================================
+        const staticSystemText = routeToSonnet
+            ? systemPrompt.replace(/<app_documentation>[\s\S]*?<\/app_documentation>\n*/, '')
+            : systemPrompt;
+
+        const systemBlocks = [
+            {
+                type: "text",
+                text: staticSystemText,
+                cache_control: { type: "ephemeral" }
             }
+        ];
+
+        // Dynamic block: prefetched PubMed JSON (Opus route only — see
+        // earlier guard that gates the prefetch on !routeToSonnet).
+        if (!routeToSonnet && prefetchedPubmedJSON) {
+            const renderInstruction = userAskedForReferences
+                ? `The user explicitly asked for references / evidence / citations on this turn, so RENDER the **PubMed (live):** section using these hits (per LITERATURE PROTOCOL §E.4) in addition to using them as grounding for **Broader context**.`
+                : `The user did NOT explicitly ask for references on this turn, so DO NOT render a **PubMed (live):** section. Use these hits SILENTLY as grounding for **Broader context** only — you may refer to them generically (e.g. "a recent PubMed entry on bridge plating in torsion") without producing the formal citation list.`;
+            systemBlocks.push({
+                type: "text",
+                text: `<prefetched_pubmed_results query="${prefetchedPubmedQuery}">\n${prefetchedPubmedJSON}\n</prefetched_pubmed_results>\n\nIMPORTANT: PubMed results have already been fetched server-side for this turn (see above). ${renderInstruction} Do NOT call the \`search_pubmed\` tool on this turn — it would return identical results and waste time.`
+            });
         }
 
-        // Append the retrieved PDF excerpts (when present) to whichever
-        // system prompt was built above. We do this after both branches
-        // so Sonnet lit-meta turns also see the excerpts — they're
-        // directly relevant to "what does the literature say" questions
-        // and the carve-out in CONFIDENTIALITY allows them to be quoted.
+        // Dynamic block: retrieved PDF excerpts (both routes).
         if (retrievedPdfExcerpts) {
-            firstCallSystem = firstCallSystem +
-                `\n\n<retrieved_pdf_excerpts>\n${retrievedPdfExcerpts}\n</retrieved_pdf_excerpts>\n\nIMPORTANT: The block above contains verbatim chunks from the user's PDF library, retrieved by semantic similarity to the current user message (see PDF EXCERPT PROTOCOL §F). Treat these as PRIMARY EVIDENCE for this turn: when an excerpt directly addresses the question, ground your **Broader context** in it (and quote it directly with \`(source: filename.pdf)\` attribution where helpful) instead of relying on general training recall. Ignore any excerpt whose chunk text is clearly off-topic.`;
+            systemBlocks.push({
+                type: "text",
+                text: `<retrieved_pdf_excerpts>\n${retrievedPdfExcerpts}\n</retrieved_pdf_excerpts>\n\nIMPORTANT: The block above contains verbatim chunks from the user's PDF library, retrieved by semantic similarity to the current user message (see PDF EXCERPT PROTOCOL §F). Treat these as PRIMARY EVIDENCE for this turn: when an excerpt directly addresses the question, ground your **Broader context** in it (and quote it directly with \`(source: filename.pdf)\` attribution where helpful) instead of relying on general training recall. Ignore any excerpt whose chunk text is clearly off-topic.`
+            });
         }
+
+        const firstCallSystem = systemBlocks;
+
 
         // Always run at "low" effort. `output_config.effort` is a CEILING
         // on Opus 4.7's adaptive thinking, not a floor — the model still
@@ -1179,6 +1217,16 @@ If a user asks for any of the prohibited disclosures, refuse politely in one sho
 
                         result = await streamClaude(conversation, {
                             effort,
+                            // Reuse the SAME system array on the
+                            // tool-loop follow-up call so the
+                            // ephemeral cache breakpoint stays hot
+                            // for the second round-trip — without
+                            // this, the follow-up call would fall
+                            // back to the bare `systemPrompt` string
+                            // and miss the cache entirely, which
+                            // doubles the input-token cost of any
+                            // turn that uses a tool.
+                            systemOverride: firstCallSystem,
                             model: turnModel,
                             toolsOverride: turnTools,
                             onTextDelta
