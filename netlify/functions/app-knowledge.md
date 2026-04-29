@@ -1,4 +1,4 @@
-# Locked Plating: Clinical Guidelines & Biomechanics — App Knowledge Base
+# Plate Osteosynthesis: A Biomechanical Primer — App Knowledge Base
 
 > This file is the AI tutor's source of truth about what the app teaches.
 > Edit this file directly when you change anything in the app.
@@ -8,7 +8,7 @@
 
 ## App Overview
 
-**Title:** Locked Plating: Clinical Guidelines & Biomechanics
+**Title:** Plate Osteosynthesis: A Biomechanical Primer
 **Type:** 6-tab interactive teaching tool with live calculators.
 **Scope:** Calibrated for a medium-sized canine bone (I_bone reference = 10,000 mm⁴). Absolute numbers do not transfer directly to human patients.
 

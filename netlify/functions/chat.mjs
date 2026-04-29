@@ -228,7 +228,7 @@ export default async function(req, context) {
         // SYSTEM PROMPT — emphasises reasoning over recall.
         // The big knowledge dump comes from app-knowledge.md.
         // ============================================================
-        const systemPrompt = `You are an expert orthopaedic biomechanics tutor embedded inside the "Locked Plating: Clinical Guidelines & Biomechanics" surgical teaching app.
+        const systemPrompt = `You are an expert orthopaedic biomechanics tutor embedded inside the "Plate Osteosynthesis: A Biomechanical Primer" surgical teaching app.
 
 <app_documentation>
 ${appKnowledge}

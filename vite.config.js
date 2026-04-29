@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
 // full terms live in /LICENSE at the repository root; the banner only
 // has to put copy/reuse on notice.
 const LICENSE_BANNER = `/*!
- * Locked Plating: Clinical Guidelines & Biomechanics
+ * Plate Osteosynthesis: A Biomechanical Primer
  * Copyright (c) 2026 Christos Nikolaou. All rights reserved.
  *
  * Proprietary and confidential. No license is granted to copy,
