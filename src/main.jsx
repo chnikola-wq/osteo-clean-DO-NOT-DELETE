@@ -1211,7 +1211,7 @@ if (typeof window !== 'undefined') {
                         <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                             <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                                 {isControlled
-                                    ? `Working Length: L = ${wlValue} mm (controlled by global banner above)`
+                                    ? `Working Length: L = ${wlValue} mm (controlled by section banner above)`
                                     : 'Set Plate Working Length (L)'}
                             </label>
                             <div className="flex space-x-2">
@@ -1686,7 +1686,7 @@ if (typeof window !== 'undefined') {
                         </div>
                     </div>
                     <div className="flex-shrink-0 text-[9px] text-indigo-200 font-medium text-right whitespace-nowrap">
-                        Local to this section
+                        Shared across Sections 5, 6 &amp; 7
                     </div>
                 </div>
             );
