@@ -2117,9 +2117,12 @@ if (typeof window !== 'undefined') {
                                 // Model 3: Pre-closure (plate alone, L-independent)
                                 const s3 = M * plate.y / plate.I_p;
 
-                                // Crossover L where spring model equals composite beam
-                                const frac_comp = s1 * plate.I_p / (M * plate.y);
-                                const L_cross   = frac_comp < 1 ? (E_St * plate.I_p * (1 - frac_comp)) / (frac_comp * K_bone) : Infinity;
+                                // Crossover L where spring model equals composite beam stress.
+                                // stress_spring(L) = M*(K/(K+K_bone))*y/I_p = s1
+                                // → K/(K+K_bone) = s1*I_p/(M*y) =: composite_plate_fraction
+                                // → L_cross = E*I_p*(1-composite_plate_fraction)/(composite_plate_fraction*K_bone)
+                                const composite_plate_fraction = s1 * plate.I_p / (M * plate.y);
+                                const L_cross = composite_plate_fraction < 1 ? (E_St * plate.I_p * (1 - composite_plate_fraction)) / (composite_plate_fraction * K_bone) : Infinity;
 
                                 // ── Chart geometry ─────────────────────────────────────────────────────
                                 const PL = 64; const PR = 16; const PT = 16; const PB = 44;
