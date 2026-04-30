@@ -2557,7 +2557,7 @@ if (typeof window !== 'undefined') {
                                     <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-[10px] text-slate-600 dark:text-slate-400 mb-2">
                                         <strong className="text-slate-700 dark:text-slate-200">Curve legend:</strong> 8 curves — all four Vi plates from Card 3 in both <strong>316L Steel (solid line)</strong> and <strong>Titanium (dashed line)</strong>, using the same colour per plate size. Comparing solid vs dashed isolates material; comparing colours isolates geometry; dragging the slider isolates working length. Curves that never cross the M = 10,000 N·mm reference line stay above it for the full range shown — those constructs never achieve gap closure at the clinical moment.
                                     </div>
-                                    <svg viewBox="0 0 500 310" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
+                                    <svg viewBox="0 0 500 272" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
                                         {/* Axes */}
                                         <line x1="50" y1="50" x2="50" y2="250" stroke="#cbd5e1" strokeWidth="2" />
                                         <line x1="50" y1="250" x2="450" y2="250" stroke="#94a3b8" strokeWidth="2" />
@@ -2596,25 +2596,6 @@ if (typeof window !== 'undefined') {
                                         </g>
                                         {/* Draggable handle */}
                                         <circle cx={mapX(bannerWL)} cy="50" r="6" fill="#fbbf24" stroke="white" strokeWidth="2" style={{cursor:'ew-resize'}} />
-                                        {/* Legend — 4 plate rows, solid=Steel / dashed=Ti */}
-                                        <g transform="translate(260, 56)">
-                                            <rect x="0" y="0" width="190" height="86" rx="3" fill="white" fillOpacity="0.92" />
-                                            <text x="4" y="10" fill="#475569" fontSize="7" fontWeight="bold">Solid = Steel  |  Dashed = Ti</text>
-                                            {cm_plates.map((p, i) => {
-                                                const lS = lcrit(CM_E_St, p.I_p);
-                                                const lT = lcrit(CM_E_Ti, p.I_p);
-                                                const lSStr = lS <= maxL ? `${Math.round(lS)}mm` : '>100mm';
-                                                const lTStr = lT <= maxL ? `${Math.round(lT)}mm` : '>100mm';
-                                                const y0 = 20 + i * 16;
-                                                return (
-                                                    <React.Fragment key={i}>
-                                                        <line x1="4" y1={y0+3} x2="18" y2={y0+3} stroke={PCOL[i]} strokeWidth="2.5" />
-                                                        <line x1="20" y1={y0+3} x2="34" y2={y0+3} stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
-                                                        <text x="38" y={y0+6} fill="#334155" fontSize="7.5">{p.name.replace('Vi ','')} — St:{lSStr} Ti:{lTStr}</text>
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </g>
                                         {/* Invisible drag rect */}
                                         <rect
                                             x="50" y="50" width="400" height="200"
@@ -2642,6 +2623,25 @@ if (typeof window !== 'undefined') {
                                             onPointerCancel={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
                                         />
                                     </svg>
+                                    {/* Legend below chart — no curve overlap */}
+                                    <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1 mb-1">
+                                        <span className="font-semibold">——</span> Steel&nbsp;&nbsp;<span className="font-semibold">- - -</span> Titanium&nbsp;&nbsp;Colour = plate size. Critical L_crit where curve crosses M = 10 000 N·mm:
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-slate-700 dark:text-slate-300">
+                                        {cm_plates.map((p, i) => {
+                                            const lS = lcrit(CM_E_St, p.I_p);
+                                            const lT = lcrit(CM_E_Ti, p.I_p);
+                                            return (
+                                                <div key={i} className="flex items-center gap-1.5">
+                                                    <svg width="30" height="8" style={{flexShrink:0}}>
+                                                        <line x1="0" y1="4" x2="12" y2="4" stroke={PCOL[i]} strokeWidth="2.5" />
+                                                        <line x1="14" y1="4" x2="26" y2="4" stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
+                                                    </svg>
+                                                    <span>{p.name.replace('Vi ','')} — St:{lS<=maxL?`${Math.round(lS)}mm`:'>100'} Ti:{lT<=maxL?`${Math.round(lT)}mm`:'>100'}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             );
                         })()}
@@ -2683,7 +2683,7 @@ if (typeof window !== 'undefined') {
                                     <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
                                         <strong>Post-closure plate stress (<Latex math="\sigma_{post}" />) vs Working Length</strong> — companion graph showing the implant stress that actually matters for fatigue. To the <em>left</em> of each curve's critical <Latex math="L" /> the gap doesn't close at the clinical moment, so the plate carries the entire load (flat plateau at <Latex math={'\\sigma_{pre} = M y / I_p'} />). To the <em>right</em>, load-sharing begins and stress drops as <Latex math="L" /> grows. <strong>Solid = Steel, dashed = Titanium</strong>; colour identifies plate size. Drag the amber handle (or use the banner above) to inspect a given <Latex math="L" />.
                                     </p>
-                                    <svg viewBox="0 0 500 310" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
+                                    <svg viewBox="0 0 500 272" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
                                         {/* Axes */}
                                         <line x1="50" y1="50" x2="50" y2="250" stroke="#cbd5e1" strokeWidth="2" />
                                         <line x1="50" y1="250" x2="450" y2="250" stroke="#94a3b8" strokeWidth="2" />
@@ -2719,23 +2719,6 @@ if (typeof window !== 'undefined') {
                                         </g>
                                         {/* Draggable handle */}
                                         <circle cx={mapX(bannerWL)} cy="50" r="6" fill="#fbbf24" stroke="white" strokeWidth="2" style={{cursor:'ew-resize', pointerEvents:'none'}} />
-                                        {/* Legend with live σ values — 4 plate rows */}
-                                        <g transform="translate(50, 56)">
-                                            <rect x="0" y="0" width="195" height="86" rx="3" fill="white" fillOpacity="0.92" />
-                                            <text x="4" y="10" fill="#475569" fontSize="7" fontWeight="bold">Solid = Steel  |  Dashed = Ti</text>
-                                            {curveSets.map((c, i) => {
-                                                const y0 = 20 + i * 16;
-                                                return (
-                                                    <React.Fragment key={i}>
-                                                        <line x1="4" y1={y0+3} x2="18" y2={y0+3} stroke={PCOL[i]} strokeWidth="2.5" />
-                                                        <line x1="20" y1={y0+3} x2="34" y2={y0+3} stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
-                                                        <text x="38" y={y0+6} fill="#334155" fontSize="7.5">
-                                                            {c.p.name.replace('Vi ','')} St:{Math.round(c.sNowSt)} Ti:{Math.round(c.sNowTi)} MPa
-                                                        </text>
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </g>
                                         {/* Invisible drag rect */}
                                         <rect
                                             x="50" y="50" width="400" height="200"
@@ -2763,6 +2746,21 @@ if (typeof window !== 'undefined') {
                                             onPointerCancel={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
                                         />
                                     </svg>
+                                    {/* Legend below chart — no curve overlap; live σ updates as L is dragged */}
+                                    <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1 mb-1">
+                                        <span className="font-semibold">——</span> Steel&nbsp;&nbsp;<span className="font-semibold">- - -</span> Titanium&nbsp;&nbsp;Colour = plate size. Live σ at L = {bannerWL} mm:
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-slate-700 dark:text-slate-300">
+                                        {curveSets.map((c, i) => (
+                                            <div key={i} className="flex items-center gap-1.5">
+                                                <svg width="30" height="8" style={{flexShrink:0}}>
+                                                    <line x1="0" y1="4" x2="12" y2="4" stroke={PCOL[i]} strokeWidth="2.5" />
+                                                    <line x1="14" y1="4" x2="26" y2="4" stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
+                                                </svg>
+                                                <span>{c.p.name.replace('Vi ','')} — St:{Math.round(c.sNowSt)} Ti:{Math.round(c.sNowTi)} MPa</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                     <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mt-2">
                                         Tick marks on the x-axis at the foot of each curve indicate the critical <Latex math="L" /> at which that construct first achieves gap closure under M = 10,000 N·mm. To the left of that tick the curve is flat at the plate-alone stress; to the right it falls along the load-sharing curve.
                                     </p>
