@@ -1829,7 +1829,7 @@ if (typeof window !== 'undefined') {
                             <LoadSharingInteractiveGraph />
                         </div>
                         <p className="text-xs text-slate-500 italic mt-2">
-                            *Note: While increasing <Latex math="L" /> limits initial stress in load-sharing, it exponentially increases plate stress in load-bearing (bridging) scenarios. Refer to the "Closing-gap" tab for the P-Delta modelling of the bridging effect.
+                            *Note: While increasing <Latex math="L" /> limits initial stress in load-sharing, it exponentially increases plate stress in load-bearing (bridging) scenarios. Refer to the "Closing-gap" tab for the P-Delta modelling of the bridging effect. These load-sharing conclusions also assume complete cortical contact (closed gap). The 1 mm Gap Scenario — Concept 7 below — shows how the conclusions change when a realistic residual gap is accounted for.
                         </p>
                     </div>
                 </div>
@@ -1905,9 +1905,81 @@ if (typeof window !== 'undefined') {
                                     </li>
                                 </ul>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Each up-size step on the Steel curve buys a clinically meaningful drop in plate stress — ~7.2 MPa for 2.7 → 3.5 Narrow, and ~3.5 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.5 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective.
+                                    <strong>Conclusion:</strong> Each up-size step on the Steel curve buys a clinically meaningful drop in plate stress — ~7.2 MPa for 2.7 → 3.5 Narrow, and ~3.5 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.5 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective. <em>Important caveat: this conclusion assumes full cortical contact (closed gap). See Concept 7 below for how upsizing can paradoxically increase plate stress in the realistic 1 mm gap scenario.</em>
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Concept 7: The 1 mm Gap Scenario */}
+                <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-amber-700 dark:text-amber-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+                            7. The Realistic Scenario: A 1 mm Interfragmentary Gap
+                        </h3>
+
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            The three levers above were evaluated assuming perfect cortical contact (closed gap). In reality, a residual gap of approximately <strong>1 mm</strong> is common even after careful reduction. This single millimetre changes the ranking of the levers — and produces a counter-intuitive result for plate upsizing.
+                        </p>
+
+                        <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                            <strong className="text-amber-800 dark:text-amber-300 text-sm block mb-2">Gap Closure Under Pure Bending</strong>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Axial loading is not required to close a small interfragmentary gap. A bending moment alone is sufficient: as the construct flexes, the far cortex touches first (near cortex opens slightly). In reality, contact begins at the far cortical edge and spreads progressively; we approximate this as immediate uniform bone-to-bone contact across the full cross-section once the moment reaches <Latex math="M_{\text{close}}" />. This is explicitly an approximation — it slightly overestimates load-sharing immediately after closure, giving an optimistic (lower) estimate of plate stress in the post-closure regime.
+                            </p>
+                        </div>
+
+                        <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <strong className="text-slate-800 dark:text-slate-200 text-sm block mb-2">The Critical Moment: <Latex math="M_{\text{close}}" /></strong>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Before the gap closes, the plate alone carries the full bending moment. Once <Latex math="M \geq M_{\text{close}}" />, the bone joins as a parallel spring and the plate stress drops sharply. The value of <Latex math="M_{\text{close}}" /> is proportional to the rotational stiffness of the plate spanning the gap:
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-2 text-center font-mono">
+                                M_close ∝ K_plate = E · I_p / L
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-2">
+                                A stiffer plate (large <Latex math="I_p" />, high <Latex math="E" />, or short <Latex math="L" />) requires a larger moment to flex enough for the cortices to touch. A more compliant plate needs a smaller moment — so load-sharing kicks in sooner.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex flex-col">
+                                <strong className="text-indigo-700 dark:text-indigo-400 text-sm block mb-2">↑ Working Length</strong>
+                                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
+                                    Longer working length → lower <Latex math="K_{\text{plate}}" /> → lower <Latex math="M_{\text{close}}" />. The construct reaches load-sharing at a <em>smaller</em> applied moment. At any clinical moment above this threshold, the bone carries the majority of the load and plate stress drops substantially.
+                                </p>
+                                <p className="text-xs font-bold text-indigo-700 dark:text-indigo-400 mt-auto">
+                                    ↓ M_close → earlier load-sharing → ↓ plate stress ✓
+                                </p>
+                            </div>
+
+                            <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex flex-col">
+                                <strong className="text-emerald-700 dark:text-emerald-400 text-sm block mb-2">Steel → Titanium</strong>
+                                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
+                                    Lower <Latex math="E_{\text{Ti}}" /> reduces <Latex math="K_{\text{plate}}" /> and therefore <Latex math="M_{\text{close}}" />, with no change in plate geometry. The construct reaches load-sharing sooner. Past the load-sharing knee, plate stress drops sharply — on top of the direct reduction from the lower modular ratio <Latex math="n" /> in the composite formula.
+                                </p>
+                                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-auto">
+                                    ↓ M_close → earlier load-sharing → ↓ plate stress ✓
+                                </p>
+                            </div>
+
+                            <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 flex flex-col">
+                                <strong className="text-rose-700 dark:text-rose-400 text-sm block mb-2">↑ Plate Size (Upsizing)</strong>
+                                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
+                                    A larger plate raises <Latex math="K_{\text{plate}}" /> and therefore <Latex math="M_{\text{close}}" />. If the clinical bending moment sits <em>below</em> the new, higher <Latex math="M_{\text{close}}" />, the gap never closes and the plate bears 100% of the load — with a larger section modulus to help, but potentially no load-sharing at all. If the original plate was already achieving load-sharing at that clinical moment, upsizing can therefore <strong>paradoxically increase plate stress</strong> by preventing gap closure.
+                                </p>
+                                <p className="text-xs font-bold text-rose-700 dark:text-rose-400 mt-auto">
+                                    ↑ M_close → delayed (or lost) load-sharing → ↑ plate stress ⚠
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-100 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-300 dark:border-amber-700/50">
+                            <strong className="text-amber-900 dark:text-amber-200 text-sm block mb-1">Clinical Implication</strong>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                                Whether upsizing raises or lowers plate stress in a realistic scenario depends on where the clinical moment falls relative to <Latex math="M_{\text{close}}" /> for each construct. If the original plate was already load-sharing at the typical in-vivo moment, upsizing moves the construct into a no-load-sharing regime and can increase peak plate stress — the opposite of the conclusion drawn from the composite (closed-gap) model in Concept 6. Increasing working length or switching to titanium unambiguously lower <Latex math="M_{\text{close}}" /> and therefore enable earlier load-sharing under the same clinical moment.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1964,7 +2036,7 @@ if (typeof window !== 'undefined') {
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Double Plating (Bridging)</h3>
                         
                         <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                            In a comminuted fracture with a gap, bone support is zero. The composite AMI no longer applies. We must evaluate the combined <strong>Isolated Implant AMI</strong> of the plates themselves.
+                            In a fracture with a persistent interfragmentary gap, bone support is zero. The composite AMI no longer applies. We must evaluate the combined <strong>Isolated Implant AMI</strong> of the plates themselves.
                         </p>
 
                         <div className="space-y-4 mb-6">
@@ -2002,10 +2074,13 @@ if (typeof window !== 'undefined') {
                 <div className="fade-in space-y-6">
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800/50">
                         <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300">
-                            <strong>Working length</strong> — the unsupported span between the innermost screws — is the principal determinant of plate stress in two distinct clinical scenarios: <strong>(1) bridging (comminuted) constructs</strong>, where no cortical contact exists and the plate bears the entire load; and <strong>(2) compressed constructs loaded in open-gap mode</strong>, where externally applied moments tend to open the fracture gap and cortical contact on the tension side is therefore lost. In both situations the plate behaves as an isolated beam spanning the working length, so the same mechanical principles govern stress.
+                            <strong>Working length</strong> — the unsupported span between the innermost screws — is the principal determinant of plate stress in two distinct clinical scenarios: <strong>(1) bridging constructs with a large persistent gap</strong>, where no cortical contact exists and the plate bears the entire load; and <strong>(2) compressed constructs loaded in open-gap mode</strong>, where externally applied moments tend to open the fracture gap and cortical contact on the tension side is therefore lost. In both situations the plate behaves as an isolated beam spanning the working length, so the same mechanical principles govern stress.
                         </p>
                         <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
                             The interactive model and mathematics below present the influence of working length in the <strong>bridging configuration</strong>. Because the load-bearing mechanism is identical, this analysis is also a valid approximation of what happens in a compressed construct that is subjected to open-gap loading. Increasing the working length makes the plate more flexible; however, this flexibility either alleviates or multiplies plate stress depending on whether cortical contact can be re-established.
+                        </p>
+                        <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
+                            To compare the effect of working length against material choice and plate size under <em>realistic</em> conditions, we will assume a small <strong>interfragmentary gap of 1 mm</strong>. This is a clinically representative scenario: complete anatomical reduction is rarely achieved in practice, and a residual gap of approximately 1 mm is common even after careful reduction and compression.
                         </p>
                     </div>
 
@@ -2021,7 +2096,7 @@ if (typeof window !== 'undefined') {
                             <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50">
                                 <h4 className="font-bold text-sm text-indigo-700 dark:text-indigo-400 mb-2">Pure Bending (Four-Point Bending)</h4>
                                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    In a four-point bending test, two equal and opposing moments are applied to the ends of the beam. Between the inner loading points, the <strong>bending moment (M) is perfectly constant</strong> — it does not depend on how much the beam deflects or how long the span is. Because the stress formula is <strong>σ = M·y / I</strong>, and M stays fixed regardless of working length, <strong>lengthening the working length alone does not increase the stress</strong> in the material within the unsupported span. Deflection increases with span, but the moment — and therefore the stress — does not follow.
+                                    In a four-point bending test, two equal and opposing moments are applied to the ends of the beam. Between the inner loading points, the <strong>bending moment (M) is perfectly constant</strong> — it does not depend on how much the beam deflects or how long the span is. Because the stress formula is <strong>σ = M·y / I</strong>, and M stays fixed regardless of working length, <strong>lengthening the working length alone does not increase the stress</strong> in the material within the unsupported span. Deflection increases with span, but the moment — and therefore the stress — does not follow. Importantly, a pure bending moment <em>can</em> close a small interfragmentary gap without any axial load — this is explored in the small-gap scenario below.
                                 </p>
                             </div>
                             <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50">
@@ -2034,7 +2109,7 @@ if (typeof window !== 'undefined') {
 
                         <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700/50">
                             <p className="text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
-                                <strong>Why axial loading is used in this model:</strong> Both loading conditions produce greater deflection as working length increases. However, in pure bending the moment stays constant — making working length clinically irrelevant to stress in that idealised scenario. In axial loading, deflection feeds directly back into the moment, making the relationship between working length and plate stress clinically critical. The interactive model below uses axial loading precisely to capture this real-world P-Delta behaviour and demonstrate why every additional millimetre of working length matters in a bridging or open-gap construct.
+                                <strong>Why axial loading is used for the large-gap (bridging) model:</strong> In pure bending, the moment stays constant regardless of span — making working length irrelevant to plate stress if the gap can never close. In axial loading, deflection feeds directly back into the moment (P-Delta), making the relationship between working length and plate stress clinically critical. The interactive bridging calculator therefore uses axial loading to capture this real-world P-Delta behaviour. <em>Note: for the small-gap scenario below, axial loading is not required — bending alone closes the gap, as explained in the 1 mm gap section.</em>
                             </p>
                         </div>
                     </div>
@@ -2045,10 +2120,10 @@ if (typeof window !== 'undefined') {
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 block">Fracture Gap Size</label>
                                 <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
                                     <button onClick={() => setGapType('large')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${gapType === 'large' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        Comminuted (> 1mm)
+                                        Large Gap (bridging)
                                     </button>
                                     <button onClick={() => setGapType('small')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${gapType === 'small' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        Simple (&lt; 1mm)
+                                        1 mm Gap (realistic)
                                     </button>
                                 </div>
                             </div>
@@ -2063,12 +2138,12 @@ if (typeof window !== 'undefined') {
 
                             <div className={`p-4 rounded-xl border ${gapType === 'large' ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50'}`}>
                                 <h4 className={`font-bold mb-2 ${gapType === 'large' ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                                    {gapType === 'large' ? 'Load-Bearing Scenario' : 'Load-Sharing Scenario'}
+                                    {gapType === 'large' ? 'Load-Bearing Scenario (Large Gap)' : '1 mm Gap — Realistic Load-Sharing Scenario'}
                                 </h4>
                                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                                     {gapType === 'large' 
                                         ? "Because the bone fragments cannot touch, the plate supports 100% of the load. Increasing the working length makes the plate bow further outwards, increasing the eccentric lever arm and exponentially raising plate stresses."
-                                        : "Because the gap is tiny, increasing the working length allows the plate to flex just enough for the cortical edges to touch. Once they touch, the bone transmits the load, completely shielding the plate from further stress."}
+                                        : "A 1 mm interfragmentary gap is used as the standard comparison scenario because complete reduction is rarely achievable in practice. Under a bending moment alone (no axial load required), the plate flexes and the far cortex touches first; we approximate this as uniform bone-to-bone contact once the gap closes. The critical moment needed to close the gap (M\u2090\u2097\u2092\u209b\u2091) depends on construct stiffness: a more flexible construct — longer working length or titanium — requires a smaller M to close the gap, enabling earlier load-sharing and a sharp drop in plate stress. Upsizing makes the construct stiffer, raising M\u2090\u2097\u2092\u209b\u2091 and delaying load-sharing. The 'Realistic Scenario' concept below quantifies this."}
                                 </p>
                             </div>
                         </div>
@@ -2464,7 +2539,7 @@ if (typeof window !== 'undefined') {
 
                                 <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2 mt-6">Clinical Strengths</h4>
                                 <ul className="space-y-2 pl-1">
-                                    <li><strong className="text-slate-800 dark:text-slate-100">Contextual Brilliance:</strong> The app excels at separating the physics of load-sharing (compressed, simple fractures) from load-bearing (comminuted, bridging fractures). It prevents the common misconception that "a longer working length is always safer" by clearly showing how mechanics invert based on cortical contact.</li>
+                                    <li><strong className="text-slate-800 dark:text-slate-100">Contextual Brilliance:</strong> The app excels at separating the physics of load-sharing (compressed, simple fractures) from load-bearing (bridging fractures with a persistent gap). It prevents the common misconception that "a longer working length is always safer" by clearly showing how mechanics invert based on cortical contact.</li>
                                     <li><strong className="text-slate-800 dark:text-slate-100">Visualising the Invisible:</strong> Concepts like the "Neutral Axis Shift" and "Bone-Plate Offset Lever Arms" are notoriously difficult to conceptualise in theatre. The interactive SVGs allow surgeons to see exactly how screw placement and material selection dictate stress gradients.</li>
                                     <li><strong className="text-slate-800 dark:text-slate-100">DCP vs. LCP Nuance:</strong> The explanation of screw-tightening preload and 360-degree strain in osteoporotic bone is an excellent, biologically grounded addition that goes beyond pure metal mechanics.</li>
                                 </ul>

@@ -72,7 +72,7 @@ sigma_plate = M_plate * y / I_plate
 
 ### Model 3: P-Delta / Secant Beam-Column (Tab 3)
 
-**Applies to:** BRIDGING constructs (comminuted fracture with a gap, no cortical contact) OR compressed constructs loaded in OPEN-GAP mode (external moment opens rather than closes the fracture).
+**Applies to:** BRIDGING constructs (fracture with a large persistent gap, no cortical contact) OR compressed constructs loaded in OPEN-GAP mode (external moment opens rather than closes the fracture). Do NOT use the word "comminution" or "comminuted" to describe the gap — instead describe it as a "fracture with a persistent interfragmentary gap."
 
 **Mechanism:** plate alone supports an axial load P. As the plate deflects laterally under P, the line of action of P shifts away from the plate axis, increasing the eccentricity, which increases the moment, which increases the deflection — a positive feedback loop captured exactly by the secant function.
 
@@ -105,7 +105,7 @@ sigma = M * y / I_p
 ### Tab 2 — Constructs & Planes
 - Anatomical position determines the bending axis and which model applies.
 - Orthogonal bending across the plate gaps the far cortex; bone acts as a hinge → use isolated implant AMI (no composite).
-- Comminuted fracture with a gap → no bone support → combined isolated implant AMI of all implants.
+- Fracture with a persistent interfragmentary gap → no bone support → combined isolated implant AMI of all implants.
 - 180° (parallel) plate setups: symmetrical, compliant, promote callus formation, superior fatigue life. Risk: insufficient rigidity.
 - 90° (orthogonal) plate setups: ultra-stiff against buckling. Risk: significant fatigue penalty from skew bending stress risers (FEA-confirmed).
 
@@ -134,6 +134,40 @@ sigma = M * y / I_p
 
 ---
 
+## Section E — The 1 mm Gap Scenario (Tab 1, Concept 7)
+
+This concept reconciles the conclusions from the composite/load-sharing models (Concepts 1–6) with the reality that complete cortical reduction is rarely achieved. The app uses a 1 mm interfragmentary gap as the standard comparison baseline.
+
+### Gap closure under pure bending
+A small interfragmentary gap closes under a **bending moment alone** — axial loading is NOT required. As the construct flexes, the far cortex contacts first. The near cortex opens slightly. The app approximates this as immediate uniform bone-to-bone contact across the full cross-section once M reaches M_close. This is explicitly stated as an approximation: it slightly overestimates load-sharing at the moment of first contact, giving an optimistic (lower) bound for plate stress in the post-closure regime.
+
+### M_close — the gap-closure moment
+```
+M_close ∝ K_plate = E_plate × I_plate / L
+```
+- M_close is the bending moment at which the gap closes and load-sharing begins.
+- Stiffer construct → higher M_close → gap closes at a higher load → plate bears 100% of the moment for longer.
+- More compliant construct → lower M_close → gap closes sooner → load-sharing starts at a lower applied moment.
+
+### How the three levers change conclusions with a 1 mm gap
+
+| Lever | Effect on K_plate | Effect on M_close | Net effect on plate stress (at fixed clinical M) |
+|---|---|---|---|
+| ↑ Working length (L) | ↓ K_plate | ↓ M_close | ↓ stress — load-sharing starts sooner ✓ |
+| Steel → Titanium | ↓ K_plate (lower E) | ↓ M_close | ↓ stress — load-sharing starts sooner ✓ |
+| ↑ Plate size (upsizing) | ↑ K_plate (larger I_p) | ↑ M_close | ↑ stress — load-sharing delayed; paradoxically worse ⚠ |
+
+### The upsizing paradox
+The composite model (Concepts 1–4) predicts that upsizing always reduces plate stress because it increases the composite AMI and section modulus. This is true ONLY if cortical contact already exists (closed gap). With a 1 mm gap:
+- Upsizing makes the construct stiffer → M_close rises.
+- If the clinical moment is below the new, higher M_close, the gap never closes and the plate bears 100% of the load with no load-sharing benefit.
+- If the original, smaller plate was already achieving load-sharing at that moment, upsizing can therefore INCREASE plate stress by preventing gap closure.
+- This is not a universal rule — it depends on where the clinical moment sits relative to M_close. But it is clinically important to recognise that the composite-model recommendation ("always upsize") does not hold in the 1 mm gap regime.
+
+**Never say "comminution" or "comminuted" when describing this scenario.** Use "fracture with a 1 mm interfragmentary gap" or "fracture with a small residual gap."
+
+---
+
 ## Section D — Model Selection Rules
 
 When asked any question about plate stress or construct behaviour, FIRST identify which model applies:
@@ -142,7 +176,7 @@ When asked any question about plate stress or construct behaviour, FIRST identif
 |---|---|
 | Compressed, closed-gap, bone-on-bone contact, asking about MATERIAL or PLATE GEOMETRY | Model 1 (Composite AMI) |
 | Compressed, closed-gap, bone-on-bone contact, asking about WORKING LENGTH or LOAD SHARING | Model 2 (Parallel Spring) |
-| Bridging, comminuted, OR open-gap loading | Model 3 (P-Delta) |
+| Bridging (persistent gap), OR open-gap loading | Model 3 (P-Delta) |
 
 The same parameter (e.g., L, or material choice) can have OPPOSITE effects in different models. Never carry a conclusion from one model into another.
 
