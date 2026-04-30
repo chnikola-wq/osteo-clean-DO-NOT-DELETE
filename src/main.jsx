@@ -1604,7 +1604,7 @@ if (typeof window !== 'undefined') {
             const [bannerDragging, setBannerDragging] = useState(false);
             const bannerSliderRef = React.useRef(null);
 
-            // K-model shared constants used across Sections 5, 6, 7
+            // K-model shared constants used across Sections 6, 7, 8
             const CM_E_Ti  = 114500;
             const CM_E_St  = 187500;
             const CM_Kbone = 50000;
@@ -1625,7 +1625,7 @@ if (typeof window !== 'undefined') {
             const cm_mclose = (E, I_p, L) =>
                 (E * I_p * CM_gap) / (L * CM_Dbone);
 
-            // Representative Vi plates for Sections 6 & 7 cards
+            // Representative Vi plates for Sections 7 & 8 cards
             const cm_plates = [
                 { name: "Vi 2.7mm DCP",    I_p: 10.42,  y: 1.25 },
                 { name: "Vi 3.5mm Narrow", I_p: 28.67,  y: 1.60 },
@@ -1661,7 +1661,7 @@ if (typeof window !== 'undefined') {
                             Set Working Length (<Latex math={`L = ${bannerWL}\\,\\mathrm{mm}`} />)
                         </label>
                         <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 italic">
-                            Shared across Sections 5, 6 &amp; 7
+                            Shared across Sections 6, 7 &amp; 8
                         </span>
                     </div>
                     <div className="relative w-full flex flex-col items-center justify-center pt-1 select-none">
@@ -1702,10 +1702,10 @@ if (typeof window !== 'undefined') {
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
                     <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">Introduction</h3>
                     <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300">
-                        The models in this section describe the behaviour of a <strong>well-reduced, compressed construct</strong> — one that is designed for load-sharing between plate and bone. However, even a perfectly compressed fracture can experience an <strong>open-gap loading condition</strong>: this occurs when the externally applied bending moments are directed so as to <em>open</em> the fracture gap rather than compress it further. Under open-gap loading, the cortical edges cannot transmit tensile force, cortical contact on the tension side is lost, and the planned load-sharing breaks down — leaving the plate to carry a disproportionate share of the load.
+                        This tab analyses the plate–bone construct as a beam in <strong>four-point bending</strong>, the standard model for diaphyseal bone under physiological load. The construct does not behave as a single mechanical object: it transitions between <strong>three distinct regimes</strong> depending on how well the fracture interface can transmit compression at any given instant.
                     </p>
                     <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
-                        The analyses that follow assume a <strong>four-point bending</strong> type of load, which is the standard model for diaphyseal bone subjected to physiological bending forces.
+                        Sections 1 and 2 establish the bending-stress and composite-AMI fundamentals. <strong>Section 3</strong> then sets out the three-model framework (composite beam, parallel-spring discontinuous beam, small-gap model), states the bending-moment range over which each model is valid, and lists the limitations of each. The remaining sections apply those models in sequence: Sections 4 &amp; 5 use the composite-beam model; Sections 6 &amp; 7 use the parallel-spring discontinuous-beam model; Section 8 uses the small-gap model.
                     </p>
                 </div>
 
@@ -1837,11 +1837,67 @@ if (typeof window !== 'undefined') {
                     </div>
                 </div>
 
-                {/* Concept 3: The Material Paradox */}
+                {/* Concept 3: Three-Model Framework — when each model is valid */}
+                <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-amber-700 dark:text-amber-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+                            3. When Is the Composite-Beam Assumption Valid? Three Models for Three Regimes
+                        </h3>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            Section 2 wrote the plate stress as <Latex math={'\\sigma_{plate} = n \\cdot M\\,y / \\text{AMI}_{composite}'} />. That formula treats the plate and the underlying bone as <em>physically locked into a single composite beam</em>. But the bone is fractured — it has zero tensile strength across the fracture line. A fractured bone can carry compression where the cortices touch, but it cannot carry tension across a gap. So how can a discontinuous structure ever behave like a continuous composite beam?
+                        </p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            The resolution is the <strong>inter-fragmentary compression</strong> applied by the surgeon (lag screw, DCP ramp, or pre-bent plate). That compression provides a <em>baseline</em> compressive stress across the entire fracture cross-section. By the principle of superposition, that baseline can absorb a finite amount of bending-induced tensile stress before the net stress on the would-be tension side ever turns positive. As long as the bending moment stays below this absorption ceiling, the cortices never separate, the construct is mechanically continuous, and the composite-beam analysis is exact.
+                        </p>
+
+                        {/* Validity-range derivation */}
+                        <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 space-y-3">
+                            <strong className="text-amber-800 dark:text-amber-300 text-sm block">Validity range of the composite-beam assumption</strong>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                                Let the surgeon-applied axial pre-load be <Latex math="P" />, the bone cross-sectional area <Latex math="A_b" />, the bone area moment of inertia <Latex math="I_b" />, and the distance from the neutral axis to the extreme cortical fibre <Latex math="c" />. The compressive pre-stress is <Latex math={'\\sigma_{pre} = P / A_b'} />, applied uniformly across the section. A bending moment <Latex math="M" /> superimposes a stress <Latex math={'\\pm M\\,c / I_b'} /> at the extreme fibres. The net stress on the tension side stays compressive (i.e. the gap never opens) provided:
+                            </p>
+                            <p className="text-xs text-center"><Latex math={'M \\;\\le\\; M_{decomp} \\;=\\; \\dfrac{\\sigma_{pre}\\,I_b}{c} \\;=\\; \\dfrac{P\\,I_b}{A_b\\,c}'} /></p>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                                Below <Latex math="M_{decomp}" /> the cortices stay locked, the construct behaves as a continuous composite beam, and the transformed-section formula <Latex math={'\\sigma_{plate} = n\\,M\\,y / \\text{AMI}_{composite}'} /> applies. Above <Latex math="M_{decomp}" /> the tension-side cortex decompresses, the gap opens, and the composite assumption breaks down — the construct must be re-modelled as two fragments connected only by the plate and the contacting (compression-side) cortex.
+                            </p>
+                        </div>
+
+                        {/* Three model cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                            <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 space-y-2">
+                                <strong className="text-rose-700 dark:text-rose-400 text-sm block">Model A — Composite Beam (Transformed Section)</strong>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Used by:</strong> Sections 4 &amp; 5.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Formula:</strong> <Latex math={'\\sigma_{plate} = n\\,M\\,y / \\text{AMI}_{composite}'} />.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Valid when:</strong> the fracture is well-reduced and inter-fragmentarily compressed, full bone-to-bone cortical contact across the fracture line, and the applied bending moment satisfies <Latex math="M \\le M_{decomp}" />.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Limitations:</strong> assumes the pre-load <Latex math="P" /> is preserved in vivo (no screw loosening, no peri-fracture bone resorption), assumes loading stays in the elastic range, and is invalidated immediately if any moment exceeds <Latex math="M_{decomp}" /> (the gap opens and the cortices stop transmitting force).</p>
+                            </div>
+                            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 space-y-2">
+                                <strong className="text-indigo-700 dark:text-indigo-400 text-sm block">Model B — Parallel-Spring (Discontinuous Beam)</strong>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Used by:</strong> Sections 6 &amp; 7.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Formula:</strong> <Latex math={'M_{plate} = M\\,K_{plate}/(K_{plate}+K_{bone})'} />, then <Latex math={'\\sigma_{plate} = M_{plate}\\,y / I_p'} />, with <Latex math={'K_{plate}=E_p I_p / L'} /> and <Latex math={'K_{bone}\\approx 50{,}000\\,\\mathrm{N\\!\\cdot\\!mm/rad}'} /> (cortical contact stiffness, L-independent).</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Valid when:</strong> the bending moment exceeds <Latex math="M_{decomp}" /> (so the gap opens) <em>but</em> the compression-side cortex still touches, so the bone behaves as a discontinuous beam joined by a rotational spring at the fracture interface.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Limitations:</strong> assumes immediate cortical contact on the compression side (no residual gap), neglects the geometric coupling between plate bending and the contacting cortex (slightly over-estimates plate stress), and uses an empirical <Latex math="K_{bone}" /> that is patient- and reduction-specific.</p>
+                            </div>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 space-y-2">
+                                <strong className="text-emerald-700 dark:text-emerald-400 text-sm block">Model C — Small-Gap (<Latex math="M_{close}" />)</strong>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Used by:</strong> Section 8.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Formula:</strong> below the closure moment <Latex math={'M_{close} = E_p I_p\\,g/(L\\,D_{bone})'} /> the plate carries 100% of the load (<Latex math={'\\sigma_{plate}=M\\,y/I_p'} />); above <Latex math="M_{close}" /> Model B takes over.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Valid when:</strong> a residual interfragmentary gap <Latex math="g" /> persists. This includes the case where the fracture was perfectly reduced and compressed but <strong>peri-fracture bone resorption</strong> subsequently created a small gap — the pre-load is then lost and the construct enters this regime even though it began life as a Model A construct.</p>
+                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed"><strong>Limitations:</strong> assumes pure bending (no axial load), assumes the gap is small enough that contact <em>can</em> be regained at clinically realistic moments, and uses a step-change to load-sharing at <Latex math="M_{close}" /> that real cortices reach more gradually (slightly optimistic on plate stress at the moment of first contact).</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed pt-1">
+                            <strong>How to choose:</strong> the same construct can sit in different regimes at different instants. A perfectly reduced and compressed long-bone osteotomy lives in <em>Model A</em> for moderate physiological loads, transiently visits <em>Model B</em> during high-impact gait events that exceed <Latex math="M_{decomp}" />, and migrates into <em>Model C</em> if peri-implant resorption ever opens a gap. The remaining sections of this tab analyse each regime in turn.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Concept 4 (was 3): The Material Paradox — Composite Beam Model */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-4">
                         <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                            3. The Material Compliance Paradox
+                            4. The Material Compliance Paradox <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Composite-Beam Model)</span>
                         </h3>
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                             Looking at <Latex math={`\\sigma = n \\cdot \\frac{M \\cdot y}{\\text{AMI}}`} />, you might assume a stiffer plate is safer because it pulls the axis closer (smaller <Latex math="y" />). So why does Steel actually experience <span className="text-rose-600 dark:text-rose-400 font-bold">more</span> stress? The interactive graphs below reveal the mechanical Tug-of-War:
@@ -1869,11 +1925,11 @@ if (typeof window !== 'undefined') {
                     </div>
                 </div>
 
-                {/* Concept 4: The Geometric Contrast */}
+                {/* Concept 5 (was 4): The Geometric Contrast — Composite Beam Model */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-4">
                         <h3 className="text-xl font-bold text-blue-700 dark:text-blue-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                            4. The Geometric Contrast (Changing Plate Size)
+                            5. The Geometric Contrast — Changing Plate Size <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Composite-Beam Model)</span>
                         </h3>
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                             It is crucial not to confuse changing a plate's <em>Material</em> with changing a plate's <em>Geometry</em>. As we just proved above, increasing stiffness by swapping to Steel spikes the plate stress. But what happens if we use the exact same material and just make the plate physically thicker?
@@ -1901,12 +1957,12 @@ if (typeof window !== 'undefined') {
                     </div>
                 </div>
 
-                {/* Concept 5: Span-Material Equivalence (The Parallel Spring Model) */}
+                {/* Concept 6 (was 5): Span-Material Equivalence — Spring Model (Discontinuous Beam) */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-4">
                         {WLBanner()}
                         <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                            5. Span-Material Equivalence (The Parallel Spring Model)
+                            6. Span–Material Equivalence <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Spring Model — Discontinuous Beam)</span>
                         </h3>
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                             You are entirely correct to wonder: if the pure bending stress formula is <Latex math="\sigma = \frac{M \cdot y}{I}" />, and Working Length (<Latex math="L" />) is nowhere in that equation, how does increasing <Latex math="L" /> actually decrease plate stress in a compressive (closed-gap) construct? The answer requires understanding why the plate and the fractured bone have fundamentally different stiffness characters.
@@ -1956,7 +2012,7 @@ if (typeof window !== 'undefined') {
                         <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 space-y-3">
                             <strong className="text-rose-800 dark:text-rose-300 text-sm block">Important: Stress uses only <Latex math="I_p" /> here — not the composite AMI</strong>
                             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                                In Sections 1–3 we computed plate stress using the <em>composite</em> Area Moment of Inertia of the bonded plate-bone cross-section: <Latex math={'\\sigma_{plate} = n \\cdot \\dfrac{M \\cdot y}{\\text{AMI}_{composite}}'} />. That formula assumes the plate and the underlying bone bend together as a single fused beam.
+                                In Sections 4 &amp; 5 we computed plate stress using the <em>composite</em> Area Moment of Inertia of the bonded plate-bone cross-section: <Latex math={'\\sigma_{plate} = n \\cdot \\dfrac{M \\cdot y}{\\text{AMI}_{composite}}'} />. That formula assumes the plate and the underlying bone bend together as a single fused beam — valid only while the bending moment stays below <Latex math="M_{decomp}" /> (Section 3).
                             </p>
                             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                                 In the load-sharing K model used here, the bone is no longer continuous across the fracture, so we cannot treat plate + bone as a single composite cross-section any more. Instead, we split the total moment between the plate and the fracture interface (via <Latex math="K_{plate}" /> and <Latex math="K_{bone}" />), and we then compute plate stress as a <strong>solo beam</strong> bending under its share of the moment, using only the plate's own cross-section:
@@ -1971,17 +2027,17 @@ if (typeof window !== 'undefined') {
                             <LoadSharingInteractiveGraph controlledWL={bannerWL} onWLChange={setBannerWL} />
                         </div>
                         <p className="text-xs text-slate-500 italic mt-2">
-                            *Note: While increasing <Latex math="L" /> limits initial stress in load-sharing, it exponentially increases plate stress in load-bearing (bridging) scenarios — see the "Closing-gap" tab. These load-sharing conclusions assume post-closure cortical contact. Concept 7 below extends the analysis to a realistic 1 mm gap, showing how M_close determines when load-sharing begins and why upsizing can be paradoxically harmful.
+                            *Note: While increasing <Latex math="L" /> limits initial stress in load-sharing, it exponentially increases plate stress in load-bearing (bridging) scenarios — see the "Closing-gap" tab. These load-sharing conclusions assume post-closure cortical contact. Section 8 below extends the analysis to a realistic 1 mm gap (the small-gap model), showing how M_close determines when load-sharing begins and why upsizing can be paradoxically harmful.
                         </p>
                     </div>
                 </div>
 
-                {/* Concept 6: The Mathematical Verdict (Rate of Change) */}
+                {/* Concept 7 (was 6): The Mathematical Verdict — Spring Model */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-4">
                         {WLBanner()}
                         <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                            6. The Verdict: Material vs. Span vs. Geometry
+                            7. The Verdict: Material vs. Span vs. Geometry <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Spring Model — Discontinuous Beam)</span>
                         </h3>
                         
                         <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-4">
@@ -2014,7 +2070,7 @@ if (typeof window !== 'undefined') {
                                         <>
                                         <strong className="text-emerald-700 dark:text-emerald-400 text-sm block mb-2">1. Material Compliance (Load-Sharing K Model)</strong>
                                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                                            Using the parallel-spring load-sharing model (Section 5) at L = <strong>{bannerWL} mm</strong>, swapping from 316L Steel to Ti-6Al-4V gives:
+                                            Using the parallel-spring load-sharing model (Section 6) at L = <strong>{bannerWL} mm</strong>, swapping from 316L Steel to Ti-6Al-4V gives:
                                         </p>
                                         <div className="bg-white dark:bg-slate-800 p-2 rounded border border-emerald-200 dark:border-emerald-700 text-center font-mono text-[10px] text-emerald-600 dark:text-emerald-400 mb-1 shadow-sm flex flex-col gap-0.5">
                                             <span>Steel: <strong>{Math.round(sSt)} MPa</strong> → Titanium: <strong>{Math.round(sTi)} MPa</strong></span>
@@ -2034,7 +2090,7 @@ if (typeof window !== 'undefined') {
                             <div className="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-200 dark:border-indigo-800/50 h-auto flex flex-col">
                                 <strong className="text-indigo-700 dark:text-indigo-400 text-sm block mb-2">2. Span (The Equivalent Working Length)</strong>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                                    In a compressive load-sharing fracture (Section 5), increasing the working length softens the plate, safely shifting load to the bone. Increasing L drops stress at an approximate rate of:
+                                    In a compressive load-sharing fracture (Section 6), increasing the working length softens the plate, safely shifting load to the bone. Increasing L drops stress at an approximate rate of:
                                 </p>
                                 <div className="bg-white dark:bg-slate-800 p-2 rounded border border-indigo-200 dark:border-indigo-700 text-center font-mono text-[10px] text-indigo-600 dark:text-indigo-400 mb-3 shadow-sm flex flex-col gap-0.5">
                                     {(() => {
@@ -2059,7 +2115,7 @@ if (typeof window !== 'undefined') {
                             <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-800/50 md:col-span-2 flex flex-col">
                                 <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Load-Sharing K Model)</strong>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mb-2 border-l-2 border-blue-300 dark:border-blue-700 pl-2">
-                                    *Note: Evaluated using the parallel-spring K model (Section 5) at current L = {bannerWL} mm, <strong>316L Steel plate</strong>. Four representative Vi plates shown.
+                                    *Note: Evaluated using the parallel-spring K model (Section 6) at current L = {bannerWL} mm, <strong>316L Steel plate</strong>. Four representative Vi plates shown.
                                 </p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
                                     As plate size (<Latex math="I_p" />) increases, <Latex math="K_{plate}" /> rises (plate takes more moment) but <Latex math="I_p" /> in the denominator also rises (section resists stress better). The net effect is a meaningful stress reduction at each step — but in the K model the steps are larger than in the closed-gap composite model because the plate bears the full load-sharing burden:
@@ -2097,23 +2153,23 @@ if (typeof window !== 'undefined') {
                                     );
                                 })()}
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Each up-size step delivers a large absolute reduction in plate stress in the K load-sharing model (shown here for steel — the stiffer material exposes the geometry effect most clearly). The "equivalent L increase" column shows how many millimetres of working-length extension on the smallest plate it would take to achieve the same stress drop — highlighting that geometry is a very powerful lever. <em>Critical caveat: this assumes cortical contact exists (closed gap). Concept 7 below shows how upsizing can paradoxically <strong>increase</strong> plate stress when a realistic 1 mm gap is present, because a stiffer plate raises M_close and may prevent gap closure entirely.</em>
+                                    <strong>Conclusion:</strong> Each up-size step delivers a large absolute reduction in plate stress in the K load-sharing model (shown here for steel — the stiffer material exposes the geometry effect most clearly). The "equivalent L increase" column shows how many millimetres of working-length extension on the smallest plate it would take to achieve the same stress drop — highlighting that geometry is a very powerful lever. <em>Critical caveat: this assumes cortical contact exists (closed gap). Section 8 below shows how upsizing can paradoxically <strong>increase</strong> plate stress when a realistic 1 mm gap is present, because a stiffer plate raises M_close and may prevent gap closure entirely.</em>
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Concept 7: The Realistic 1 mm Gap Scenario */}
+                {/* Concept 8 (was 7): The Realistic 1 mm Gap Scenario — Small-Gap Model */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-5">
                         {WLBanner()}
                         <h3 className="text-xl font-bold text-amber-700 dark:text-amber-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
-                            7. The Realistic Scenario: A 1 mm Interfragmentary Gap
+                            8. The Realistic Scenario: A 1 mm Interfragmentary Gap <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Small-Gap Model)</span>
                         </h3>
 
                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                            The three levers in Section 6 were evaluated assuming perfect cortical contact. In reality, a residual gap of approximately <strong>1 mm</strong> is common even after careful reduction. This single millimetre changes the ranking of the levers — and produces a counter-intuitive result for plate upsizing — because the plate must first flex enough to close the gap before any load-sharing begins.
+                            The three levers in Section 7 were evaluated assuming perfect cortical contact. In reality, a residual gap of approximately <strong>1 mm</strong> is common — either from imperfect reduction or from peri-fracture bone resorption that develops <em>after</em> a perfect compressive reduction (in which case the construct begins life in the composite-beam regime and migrates into this small-gap regime as the pre-load is lost). This single millimetre changes the ranking of the levers — and produces a counter-intuitive result for plate upsizing — because the plate must first flex enough to close the gap before any load-sharing begins.
                         </p>
 
                         {/* Before Closure */}
@@ -2220,7 +2276,7 @@ if (typeof window !== 'undefined') {
                                             </div>
                                         </div>
                                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
-                                            Lower E → lower <Latex math="K_{plate}" /> → lower <Latex math="M_{close}" />. Ti reaches load-sharing sooner. Post-closure plate stress (the metric that determines implant failure) is also lower (same as Section 5 result). Both mechanisms act in the same direction — Ti is unambiguously better in the gap scenario.
+                                            Lower E → lower <Latex math="K_{plate}" /> → lower <Latex math="M_{close}" />. Ti reaches load-sharing sooner. Post-closure plate stress (the metric that determines implant failure) is also lower (same as Section 6 result). Both mechanisms act in the same direction — Ti is unambiguously better in the gap scenario.
                                         </p>
                                         <button onClick={() => setOpenMath(o => !o)} className="mt-3 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 hover:underline">
                                             {openMath ? '▲ Hide math' : '▼ See full derivation'}
@@ -3175,7 +3231,7 @@ if (typeof window !== 'undefined') {
 
                                 <p><strong className="text-slate-800 dark:text-slate-100">The P-Delta Secant Formula (Tab 3 — Bridging).</strong> The Euler beam-column secant formula is the exact closed-form solution for an eccentrically loaded column and is implemented without approximation. Independently verified at L = 120 mm: δ ≈ 7.08 mm, σ ≈ 724 MPa — consistent with the yield-strength reference line displayed on the graph. The exponential shape of the stress-vs-length curve is mathematically correct, not a visual shortcut.</p>
 
-                                <p><strong className="text-slate-800 dark:text-slate-100">The Load-Sharing Parallel Spring Model (Tab 1, Concept 5).</strong> The formula <Latex math="K_{\text{plate}} = EI/L" /> and the moment-sharing ratio are correctly derived from parallel spring mechanics. Claims verified: switching from Steel to Ti at 60 mm working length reduces stress by ~73 MPa; achieving the equivalent ~4 MPa reduction by extending Steel's working length requires only ~1.8 mm extra span — compellingly illustrating why material choice dominates geometry in the composite regime.</p>
+                                <p><strong className="text-slate-800 dark:text-slate-100">The Load-Sharing Parallel Spring Model (Tab 1, Section 6).</strong> The formula <Latex math="K_{\text{plate}} = EI/L" /> and the moment-sharing ratio are correctly derived from parallel spring mechanics. Claims verified: switching from Steel to Ti at 60 mm working length reduces stress by ~73 MPa; achieving the equivalent ~4 MPa reduction by extending Steel's working length requires only ~1.8 mm extra span — compellingly illustrating why material choice dominates geometry in the composite regime.</p>
 
                                 <p><strong className="text-slate-800 dark:text-slate-100">DCP vs. LCP Mechanics (Tab 5).</strong> The preload strain argument is based on MacLeod, Simpson &amp; Pankaj (2015) and is accurately represented. The 360° peri-screw-hole strain in DCP tightening vs. load-dependent one-sided strain in LCP locking is a real and clinically important distinction confirmed by finite element analysis.</p>
 
@@ -3184,7 +3240,7 @@ if (typeof window !== 'undefined') {
                                 <div className="space-y-3">
                                     <div className="bg-rose-50 dark:bg-rose-900/10 border-l-4 border-rose-400 p-4 rounded-r-xl">
                                         <p className="font-bold text-rose-700 dark:text-rose-400 mb-1">⚠ Two incompatible stress models coexist without reconciliation [Most significant]</p>
-                                        <p>Tab 1 contains two fundamentally different frameworks that produce numbers differing by a factor of ~15 for identical inputs. The Composite AMI model (Concepts 1–3) treats the plate and bone as physically fused, yielding ~20 MPa plate stress at the reference load. The Parallel Spring model (Concept 5) treats them as separate springs and yields ~293 MPa for the same load and geometry. Both are internally valid but they measure stress under incompatible assumptions and cannot be placed on the same number line.</p>
+                                        <p>Tab 1 contains two fundamentally different frameworks that produce numbers differing by a factor of ~15 for identical inputs. The Composite-Beam model (Sections 4–5) treats the plate and bone as physically fused, yielding ~20 MPa plate stress at the reference load. The Parallel-Spring (discontinuous-beam) model (Section 6) treats them as separate springs and yields ~293 MPa for the same load and geometry. Both are internally valid but they measure stress under incompatible assumptions and cannot be placed on the same number line. Section 3 sets out the validity range of each model and the small-gap model used in Section 8.</p>
                                     </div>
                                     <div className="bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400 p-4 rounded-r-xl">
                                         <p className="font-bold text-amber-700 dark:text-amber-400 mb-1">⚠ Model parameters are calibrated for a veterinary patient [Significant]</p>
@@ -3243,7 +3299,7 @@ if (typeof window !== 'undefined') {
                         <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
                             <div>
                                 <h1 className="text-xl md:text-2xl font-extrabold text-blue-700 dark:text-blue-400 flex items-center gap-2">
-                                    <IconSettings /> Plate Osteosynthesis: A Biomechanical Primer
+                                    <IconSettings /> Plate Osteosynthesis: A Biomechanical Primer V1.2
                                 </h1>
                                 <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium tracking-wide uppercase">
                                     Educational Companion to the V3.8 Stiffness Calculator
