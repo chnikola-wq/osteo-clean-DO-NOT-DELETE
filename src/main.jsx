@@ -1888,24 +1888,24 @@ if (typeof window !== 'undefined') {
                                     *Note: Evaluated across the unconstrained composite curve (Section 4). Micro-plates excluded.
                                 </p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                                    Tracking the total drop in stress across the Titanium curve as plate size (<Latex math="I_p" />) increases:
+                                    Tracking the total drop in stress across the Steel curve as plate size (<Latex math="I_p" />) increases — i.e. how much we have to up-size a 316L Steel plate to make the construct stronger:
                                 </p>
                                 <ul className="space-y-2 text-[10px] font-mono text-slate-700 dark:text-slate-300 mb-4 bg-white dark:bg-slate-800 p-3 rounded border border-blue-200 dark:border-blue-700 shadow-sm">
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
                                         <span>2.7mm → 3.5 Nar:</span> 
-                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -5.9 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.32 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-emerald-600 dark:text-emerald-400 font-bold block">Δ -7.2 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.40 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2 pt-2">
                                         <span>3.5 Nar → 3.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.07 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-amber-600 dark:text-amber-400 font-bold block">Δ -3.5 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.08 / unit I_p</span></div>
                                     </li>
                                     <li className="flex justify-between items-center pt-2">
                                         <span>3.5 Brd → 4.5 Brd:</span> 
-                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -3.3 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
+                                        <div className="text-right"><span className="text-rose-600 dark:text-rose-400 font-bold block">Δ -3.5 MPa Total</span><span className="text-[8px] text-slate-400 dark:text-slate-500">Rate: -0.03 / unit I_p</span></div>
                                     </li>
                                 </ul>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Each up-size step buys a clinically meaningful drop in plate stress — ~5.9 MPa for 2.7 → 3.5 Narrow, and ~3.3 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.3 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective.
+                                    <strong>Conclusion:</strong> Each up-size step on the Steel curve buys a clinically meaningful drop in plate stress — ~7.2 MPa for 2.7 → 3.5 Narrow, and ~3.5 MPa for each step thereafter. Critically, even the jump to a massive 4.5 mm Broad plate still delivers ~3.5 MPa, because the growing plate cross-section (<Latex math="A_p" />) keeps shifting the neutral axis toward the plate and lifts the bone-side <Latex math="A_b \cdot d_{bone}^2" /> contribution. The <em>rate per unit <Latex math="I_p" /></em> does fall sharply, but the <em>absolute</em> reduction does not. Up-sizing is therefore a powerful lever — but each step must be weighed against its <strong>soft-tissue cost</strong> and the <strong>stress-shielding cost</strong> imposed on the underlying bone, not dismissed as mechanically ineffective.
                                 </p>
                             </div>
                         </div>
