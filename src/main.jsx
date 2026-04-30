@@ -1637,7 +1637,7 @@ if (typeof window !== 'undefined') {
                 updateBannerFromEvent(e);
             };
             const handleBannerPointerMove = (e) => {
-                if (!bannerDragging) return;
+                if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
                 updateBannerFromEvent(e);
             };
             const handleBannerPointerUp = (e) => {
@@ -2103,7 +2103,7 @@ if (typeof window !== 'undefined') {
                                 σ_pre = M × y / I_plate &nbsp;&nbsp;(plate alone, no load sharing)
                             </p>
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                At the reference M = 10,000 N·mm with the standard plate (I_p = 25 mm⁴, y = 1.5 mm): σ_pre = 10,000 × 1.5 / 25 = <strong>600 MPa</strong> — this is close to the Ti yield limit. The goal is always to push M_close well below the expected clinical moment so load-sharing begins before the plate is maximally stressed.
+                                At the reference M = {CM_M.toLocaleString()} N·mm with the standard plate (I_p = 25 mm⁴, y = 1.5 mm): σ_pre = {CM_M.toLocaleString()} × 1.5 / 25 = <strong>{Math.round(CM_M * 1.5 / 25)} MPa</strong> — this is close to the Ti yield limit. The goal is always to push M_close well below the expected clinical moment so load-sharing begins before the plate is maximally stressed.
                             </p>
                         </div>
 
@@ -2333,7 +2333,7 @@ if (typeof window !== 'undefined') {
                                         <text x="450" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">100</text>
                                         {/* Clinical moment reference band */}
                                         <line x1="50" y1={mapY(CM_M)} x2="450" y2={mapY(CM_M)} strokeDasharray="6 3" className="stroke-amber-500 dark:stroke-amber-400 stroke-[1.5px]" />
-                                        <text x="452" y={mapY(CM_M) - 3} className="fill-amber-600 dark:fill-amber-400 text-[7px] font-bold">M = 10,000 N·mm</text>
+                                        <text x="452" y={mapY(CM_M) - 3} className="fill-amber-600 dark:fill-amber-400 text-[7px] font-bold">M = {CM_M.toLocaleString()} N·mm</text>
                                         {/* Curves */}
                                         <path d={`M ${pathFor(CM_E_Ti, I_std)}`} fill="none" className="stroke-emerald-500 stroke-[2.5px]" />
                                         <path d={`M ${pathFor(CM_E_St, I_std)}`} fill="none" className="stroke-rose-500 stroke-[2.5px]" />
