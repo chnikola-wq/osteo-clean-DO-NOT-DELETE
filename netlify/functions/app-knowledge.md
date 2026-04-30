@@ -54,19 +54,29 @@ sigma_plate   = n * (M * y) / Composite_AMI
 
 **Applies to:** same scenario as Model 1 (compressed, closed-gap), but explains how WORKING LENGTH (L) affects plate stress.
 
-**Mechanism:** plate and bone behave as two springs in parallel. Each carries a share of the total moment proportional to its rotational stiffness.
+**Mechanism:** plate and bone behave as two rotational springs in parallel at the fracture plane. Each carries a share of the total moment proportional to its rotational stiffness.
+
+**CRITICAL PHYSICS DISTINCTION — K_plate vs K_bone:**
+```
+K_plate = E_plate × I_plate / L    ← continuous beam formula; L-DEPENDENT
+K_bone  ≈ 50,000 N·mm/rad          ← empirical fracture-interface contact stiffness; L-INDEPENDENT
+```
+
+- **K_plate = EI/L** because the plate spans the working length as a *continuous* elastic beam with no discontinuity. Doubling L halves K_plate.
+- **K_bone ≠ EI_bone/L** because the bone has a fracture — a geometric discontinuity. The bone's rotational resistance comes from local cortical-to-cortical contact at the fracture interface, not from bending over the full span. This contact stiffness (≈ 50,000 N·mm/rad) is an empirical property of bone surface geometry and contact area. It does **NOT** depend on L.
+- This distinction is the mechanical reason why increasing L reduces plate stress: K_plate falls (∝ 1/L) while K_bone stays constant, shifting more moment to the bone.
 
 **Formulas:**
 ```
-K_plate     = E_plate * I_plate / L
-K_bone      = E_bone  * I_bone  / L
-M_plate     = M_total * K_plate / (K_plate + K_bone)
-sigma_plate = M_plate * y / I_plate
+K_plate     = E_plate × I_plate / L
+K_bone      ≈ 50,000 N·mm/rad  (constant; fracture interface contact, not EI_bone/L)
+M_plate     = M_total × K_plate / (K_plate + K_bone)
+sigma_plate = M_plate × y / I_plate
 ```
 
 **Key behaviour to derive answers from:**
-- L appears in K_plate. Longer L → smaller K_plate → plate is "softer" → bone takes a larger share of the moment → plate stress DROPS. Reference rate ~2.4 MPa per mm in load-sharing.
-- Same material logic as Model 1: stiffer plate (higher E) → higher K_plate → larger share of the moment → higher plate stress. Steel > Titanium for stress.
+- L appears in K_plate (not K_bone). Longer L → smaller K_plate → plate is "softer" → bone takes a larger share of the moment → plate stress DROPS. Rate at L=60 mm: ~2.5 MPa/mm for Ti, ~2.4 MPa/mm for Steel; steeper at short L, shallower at long L. Working-length range in the app: 2–100 mm.
+- Same material logic as Model 1: stiffer plate (higher E) → higher K_plate → larger share of the moment → higher plate stress. Steel > Titanium. At L=60 mm: σ_Steel ≈ 366 MPa, σ_Ti ≈ 293 MPa (Δ = −73 MPa). To achieve the same −73 MPa reduction on the Steel plate by extending L instead, you need ΔL ≈ +38 mm (to L ≈ 98 mm).
 - This safety of long L is SPECIFIC to closed-gap load-sharing. In Model 3 the relationship inverts.
 - IMPORTANT FRAMEWORK NOTE: Model 1 and Model 2 describe the same physical setup but measure stress under different assumptions. They produce different absolute numbers (~20 MPa from Model 1 vs ~293 MPa from Model 2 at the same reference load) and cannot be placed on the same number line. Both are internally valid teaching tools.
 
@@ -142,11 +152,25 @@ This concept reconciles the conclusions from the composite/load-sharing models (
 A small interfragmentary gap closes under a **bending moment alone** — axial loading is NOT required. As the construct flexes, the far cortex contacts first. The near cortex opens slightly. The app approximates this as immediate uniform bone-to-bone contact across the full cross-section once M reaches M_close. This is explicitly stated as an approximation: it slightly overestimates load-sharing at the moment of first contact, giving an optimistic (lower) bound for plate stress in the post-closure regime.
 
 ### M_close — the gap-closure moment
+
+The gap closes when the plate bends enough for the far cortex to touch. The plate end-rotation under moment M is θ = M/K_plate. Gap closes when θ × D_bone = gap (1 mm). Therefore:
 ```
-M_close ∝ K_plate = E_plate × I_plate / L
+M_close = K_plate × gap / D_bone = (E_plate × I_plate × gap) / (L × D_bone)
 ```
+Where: gap = 1 mm, D_bone = 17 mm (= 2 × r_bone = 2 × 8.5 mm), reference plate I_p = 25 mm⁴.
+
+**Numerical values at L = 60 mm:**
+- Ti standard (I_p=25): M_close = 114,500 × 25 × 1 / (60 × 17) ≈ **2,806 N·mm**
+- Steel standard (I_p=25): M_close = 187,500 × 25 × 1 / (60 × 17) ≈ **4,596 N·mm**
+- Ti large plate (I_p=74.09): M_close = 114,500 × 74.09 × 1 / (60 × 17) ≈ **8,300 N·mm**
+
+**Critical L** (where M_close = clinical reference M = 10,000 N·mm):
+- Ti standard: L_crit ≈ 16.8 mm — below this L, 10,000 N·mm cannot close the gap
+- Steel standard: L_crit ≈ 27.6 mm
+- Ti large plate: L_crit ≈ 49.9 mm
+
 - M_close is the bending moment at which the gap closes and load-sharing begins.
-- Stiffer construct → higher M_close → gap closes at a higher load → plate bears 100% of the moment for longer.
+- Stiffer construct (large I_p, high E, short L) → higher M_close → gap closes at a higher load → plate bears 100% of the moment for longer.
 - More compliant construct → lower M_close → gap closes sooner → load-sharing starts at a lower applied moment.
 
 ### How the three levers change conclusions with a 1 mm gap
