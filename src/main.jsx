@@ -1661,7 +1661,7 @@ if (typeof window !== 'undefined') {
                             Set Working Length (<Latex math={`L = ${bannerWL}\\,\\mathrm{mm}`} />)
                         </label>
                         <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 italic">
-                            Shared across Sections 6, 7, 8 &amp; 9
+                            Shared across Sections 7, 8, 9 &amp; 10
                         </span>
                     </div>
                     <div className="relative w-full flex flex-col items-center justify-center pt-1 select-none">
@@ -1705,7 +1705,7 @@ if (typeof window !== 'undefined') {
                         This tab analyses the plate–bone construct as a beam in <strong>four-point bending</strong>, the standard model for diaphyseal bone under physiological load. The construct does not behave as a single mechanical object: it transitions between <strong>three distinct regimes</strong> depending on how well the fracture interface can transmit compression at any given instant.
                     </p>
                     <p className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 mt-3">
-                        Sections 1 and 2 establish the bending-stress and composite-AMI fundamentals. <strong>Section 3</strong> then sets out the three-model framework (composite beam, parallel-spring discontinuous beam, small-gap model), states the bending-moment range over which each model is valid, and lists the limitations of each. The remaining sections apply those models in sequence: Sections 4, 5 &amp; 6 use the composite-beam model; Sections 7 &amp; 8 use the parallel-spring discontinuous-beam model; Section 9 uses the small-gap model.
+                        Sections 1 and 2 establish the bending-stress and composite-AMI fundamentals. <strong>Section 3</strong> then sets out the three-model framework (composite beam, parallel-spring discontinuous beam, small-gap model), states the bending-moment range over which each model is valid, and lists the limitations of each. The remaining sections apply those models in sequence: Sections 4, 5 &amp; 6 use the composite-beam model; Sections 7 &amp; 8 use the parallel-spring discontinuous-beam model; Section 9 uses the small-gap model. <strong>Section 10</strong> brings all three models together in a direct comparison, showing how much compressive reduction actually protects the implant.
                     </p>
                 </div>
 
@@ -2075,167 +2075,9 @@ if (typeof window !== 'undefined') {
                                 })()}
                             </div>
                         </div>
-
-                        {/* THREE-MODEL COMPARISON */}
-                        <div className="mt-2 space-y-4">
-                            <h4 className="text-base font-bold text-teal-700 dark:text-teal-400 border-b border-slate-200 dark:border-slate-700 pb-2">
-                                How Much Does Compressive Reduction Actually Protect the Implant?
-                            </h4>
-                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                                The most clinically important question in plate mechanics is this: how much does the compressive composite structure actually reduce plate stress compared with a fracture that has opened? To answer this precisely, all three models are evaluated side-by-side using <strong>identical inputs</strong> — the same bone, the same plate, and the same applied moment — so the only variable is the assumption about whether the fracture interface is in contact.
-                            </p>
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400">
-                                <strong>Fixed parameters:</strong> Vi 3.5mm Narrow DCP, <strong>316L Steel</strong> — <Latex math="I_p = 28.67\,\mathrm{mm}^4,\; y = 1.60\,\mathrm{mm},\; E_{steel} = 187.5\,\mathrm{GPa}" />. Bone: <Latex math="I_b = 10{,}000\,\mathrm{mm}^4,\; A_b = 150\,\mathrm{mm}^2,\; r_{bone} = 8.5\,\mathrm{mm}" />. <Latex math="M = 10{,}000\,\mathrm{N{\cdot}mm}" />.
-                            </div>
-
-                            {WLBanner()}
-
-                            {(() => {
-                                // ── Shared constants ───────────────────────────────────────────────────
-                                const plate = cm_plates[1]; // Vi 3.5mm Narrow: I_p=28.67, y=1.60
-                                const E_St   = 187500; const E_bone = 18000;
-                                const n_St   = E_St / E_bone;
-                                const r_bone = 8.5;
-                                const A_b = 150; const I_b = 10000; const M = 10000;
-                                const K_bone = 50000;
-                                const A_p  = 3 * plate.I_p / (plate.y * plate.y); // rect. section identity
-
-                                // Model 1: Composite beam (L-independent)
-                                const D_i  = r_bone + plate.y;
-                                const dp   = A_b * D_i / (n_St * A_p + A_b);
-                                const db   = D_i - dp;
-                                const AMI  = n_St * (plate.I_p + A_p * dp * dp) + (I_b + A_b * db * db);
-                                const s1   = n_St * M * (dp + plate.y) / AMI;
-
-                                // Model 2: Spring K model at bannerWL (L-dependent)
-                                const getS2 = (L) => {
-                                    const K = E_St * plate.I_p / L;
-                                    return M * (K / (K + K_bone)) * plate.y / plate.I_p;
-                                };
-                                const s2 = getS2(bannerWL);
-
-                                // Model 3: Pre-closure (plate alone, L-independent)
-                                const s3 = M * plate.y / plate.I_p;
-
-                                // Crossover L where spring model equals composite beam stress.
-                                // stress_spring(L) = M*(K/(K+K_bone))*y/I_p = s1
-                                // → K/(K+K_bone) = s1*I_p/(M*y) =: composite_plate_fraction
-                                // → L_cross = E*I_p*(1-composite_plate_fraction)/(composite_plate_fraction*K_bone)
-                                const composite_plate_fraction = s1 * plate.I_p / (M * plate.y);
-                                const L_cross = composite_plate_fraction < 1 ? (E_St * plate.I_p * (1 - composite_plate_fraction)) / (composite_plate_fraction * K_bone) : Infinity;
-
-                                // ── Chart geometry ─────────────────────────────────────────────────────
-                                const PL = 64; const PR = 16; const PT = 16; const PB = 44;
-                                const W = 520; const H = 260;
-                                const PW = W - PL - PR; const PH = H - PT - PB;
-                                const yMax = 600;
-                                const mx = (L) => PL + (L - 2) / 98 * PW;
-                                const my = (s) => PT + PH - (s / yMax) * PH;
-
-                                // Spring curve points
-                                const springPts = [];
-                                for (let L = 2; L <= 100; L += 1) springPts.push([mx(L), my(getS2(L))]);
-                                const springPath = springPts.map((p, i) => (i === 0 ? `M${p[0].toFixed(1)},${p[1].toFixed(1)}` : `L${p[0].toFixed(1)},${p[1].toFixed(1)}`)).join(' ');
-
-                                // Y-axis grid lines every 100 MPa
-                                const yTicks = [0, 100, 200, 300, 400, 500, 600];
-
-                                const cursorX = mx(bannerWL);
-                                const s2Y = my(s2);
-                                const s1Y = my(s1);
-                                const s3Y = my(s3);
-
-                                return (
-                                    <div className="space-y-4">
-                                        {/* Scorecard */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                            <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/50 rounded-xl p-3 flex flex-col items-center text-center">
-                                                <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400 mb-1">Model 1 — Composite Beam</span>
-                                                <span className="text-2xl font-bold text-teal-600 dark:text-teal-300">{s1.toFixed(1)}</span>
-                                                <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>constant, any L</em></span>
-                                                <span className="text-[9px] text-teal-600 dark:text-teal-500 mt-1 italic">Cortical contact intact; composite AMI shared</span>
-                                            </div>
-                                            <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 flex flex-col items-center text-center">
-                                                <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400 mb-1">Model 2 — Spring K (at L = {bannerWL} mm)</span>
-                                                <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">{s2.toFixed(1)}</span>
-                                                <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>decreases with L</em></span>
-                                                <span className="text-[9px] text-indigo-600 dark:text-indigo-500 mt-1 italic">{(s2/s1).toFixed(0)}× higher than composite beam</span>
-                                            </div>
-                                            <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/50 rounded-xl p-3 flex flex-col items-center text-center">
-                                                <span className="text-[10px] font-semibold text-rose-700 dark:text-rose-400 mb-1">Model 3 — Pre-Closure (plate alone)</span>
-                                                <span className="text-2xl font-bold text-rose-600 dark:text-rose-300">{s3.toFixed(1)}</span>
-                                                <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>constant, any L</em></span>
-                                                <span className="text-[9px] text-rose-600 dark:text-rose-500 mt-1 italic">{(s3/s1).toFixed(0)}× higher than composite beam</span>
-                                            </div>
-                                        </div>
-
-                                        {/* SVG chart */}
-                                        <div className="overflow-x-auto">
-                                        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-2xl mx-auto block" style={{minWidth: '340px'}}>
-                                            {/* Grid & axes */}
-                                            {yTicks.map(s => (
-                                                <g key={s}>
-                                                    <line x1={PL} y1={my(s)} x2={PL+PW} y2={my(s)} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-slate-700" />
-                                                    <text x={PL-6} y={my(s)+4} textAnchor="end" fontSize="9" className="fill-slate-500 dark:fill-slate-400">{s}</text>
-                                                </g>
-                                            ))}
-                                            {/* x-axis labels */}
-                                            {[2,20,40,60,80,100].map(L => (
-                                                <g key={L}>
-                                                    <line x1={mx(L)} y1={PT+PH} x2={mx(L)} y2={PT+PH+4} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
-                                                    <text x={mx(L)} y={PT+PH+14} textAnchor="middle" fontSize="9" className="fill-slate-500 dark:fill-slate-400">{L}</text>
-                                                </g>
-                                            ))}
-                                            {/* axis borders */}
-                                            <line x1={PL} y1={PT} x2={PL} y2={PT+PH} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
-                                            <line x1={PL} y1={PT+PH} x2={PL+PW} y2={PT+PH} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
-                                            {/* axis labels */}
-                                            <text x={W/2} y={H-4} textAnchor="middle" fontSize="10" className="fill-slate-600 dark:fill-slate-400">Working Length L (mm)</text>
-                                            <text x={8} y={H/2} textAnchor="middle" fontSize="10" transform={`rotate(-90, 8, ${H/2})`} className="fill-slate-600 dark:fill-slate-400">σ (MPa)</text>
-
-                                            {/* Model 3: pre-closure flat line (rose) */}
-                                            <line x1={PL} y1={my(s3)} x2={PL+PW} y2={my(s3)} stroke="#f43f5e" strokeWidth="2" strokeDasharray="6 3" />
-                                            <text x={PL+PW-4} y={my(s3)-5} textAnchor="end" fontSize="9" fill="#f43f5e">Pre-closure (~{s3.toFixed(0)} MPa)</text>
-
-                                            {/* Model 2: spring model curve (indigo) */}
-                                            <path d={springPath} fill="none" stroke="#6366f1" strokeWidth="2.5"/>
-                                            <text x={PL+8} y={my(getS2(2))+12} fontSize="9" fill="#6366f1">Spring K model</text>
-
-                                            {/* Model 1: composite flat line (teal) */}
-                                            <line x1={PL} y1={my(s1)} x2={PL+PW} y2={my(s1)} stroke="#0d9488" strokeWidth="2.5" strokeDasharray="4 2"/>
-                                            <text x={PL+4} y={my(s1)-5} textAnchor="start" fontSize="9" fill="#0d9488">Composite beam (~{s1.toFixed(0)} MPa)</text>
-
-                                            {/* Cursor at bannerWL */}
-                                            <line x1={cursorX} y1={PT} x2={cursorX} y2={PT+PH} stroke="#64748b" strokeWidth="1.5" strokeDasharray="4 3"/>
-                                            {/* Dots at cursor */}
-                                            <circle cx={cursorX} cy={s2Y} r="4" fill="#6366f1"/>
-                                            <circle cx={cursorX} cy={s1Y} r="4" fill="#0d9488"/>
-
-                                            {/* Cursor label */}
-                                            {(() => {
-                                                const lx = cursorX + (bannerWL > 75 ? -6 : 6);
-                                                const anchor = bannerWL > 75 ? 'end' : 'start';
-                                                return <text x={lx} y={PT+10} fontSize="9" textAnchor={anchor} className="fill-slate-600 dark:fill-slate-300">L = {bannerWL} mm</text>;
-                                            })()}
-                                        </svg>
-                                        </div>
-
-                                        {/* Conclusion */}
-                                        <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-800/50 p-4 rounded-xl text-xs text-slate-700 dark:text-slate-300 space-y-2">
-                                            <strong className="text-teal-700 dark:text-teal-400 block">Key Insight: The Enormous Protective Effect of Compressive Reduction</strong>
-                                            <p className="leading-relaxed">
-                                                At the current working length of <strong>{bannerWL} mm</strong>, compressive reduction reduces plate stress by a factor of <strong>~{(s2/s1).toFixed(0)}&times;</strong> compared to a fully open fracture without contact (spring model). The spring model stress is <strong>{s2.toFixed(0)} MPa</strong> versus <strong>{s1.toFixed(0)} MPa</strong> for the intact composite. The pre-closure scenario (plate alone) gives <strong>{s3.toFixed(0)} MPa</strong> — <strong>{(s3/s1).toFixed(0)}&times;</strong> the composite value.
-                                            </p>
-                                            <p className="leading-relaxed">
-                                                Use the banner above to explore whether extending working length in the spring model can overcome this advantage. Notice that the spring-model stress curve (purple) decreases with L but converges toward the composite line (teal) only at an L of approximately <strong>{L_cross < 10000 ? `${(L_cross/1000).toFixed(1)} m` : '&gt; 10 m'}</strong> — far outside any clinical construct. <em>Compressive cortical contact, not span extension, is what produces the dramatic AMI-mediated protection.</em>
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
                     </div>
                 </div>
+
                 {/* Concept 7 (was 6): Span-Material Equivalence — Spring Model (Discontinuous Beam) */}
                 <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-4">
@@ -2914,6 +2756,167 @@ if (typeof window !== 'undefined') {
                                 Whether upsizing raises or lowers plate stress in a realistic gap scenario depends entirely on where the clinical moment falls relative to <Latex math="M_{close}" /> for each construct. Use the banner above (or drag either graph) to test: as you decrease <Latex math="L" />, watch <Latex math="M_{close}" /> rise — eventually exceeding the clinical moment for the large plate, triggering the paradox. Increasing working length or switching to titanium unambiguously lowers <Latex math="M_{close}" /> and therefore guarantees earlier load-sharing under the same clinical load.
                             </p>
                         </div>
+                    </div>
+                </div>
+
+                {/* Concept 10: THREE-MODEL COMPARISON — How much does compressive reduction protect the implant? */}
+                <div className="grid grid-cols-1 gap-6 bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-teal-700 dark:text-teal-400 flex items-center border-b border-slate-200 dark:border-slate-700 pb-2">
+                            10. How Much Does Compressive Reduction Actually Protect the Implant? <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">(Three-Model Comparison)</span>
+                        </h3>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            The most clinically important question in plate mechanics is this: how much does the compressive composite structure actually reduce plate stress compared with a fracture that has opened? To answer this precisely, all three models are evaluated side-by-side using <strong>identical inputs</strong> — the same bone, the same plate, and the same applied moment — so the only variable is the assumption about whether the fracture interface is in contact.
+                        </p>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400">
+                            <strong>Fixed parameters:</strong> Vi 3.5mm Narrow DCP, <strong>316L Steel</strong> — <Latex math="I_p = 28.67\,\mathrm{mm}^4,\; y = 1.60\,\mathrm{mm},\; E_{steel} = 187.5\,\mathrm{GPa}" />. Bone: <Latex math="I_b = 10{,}000\,\mathrm{mm}^4,\; A_b = 150\,\mathrm{mm}^2,\; r_{bone} = 8.5\,\mathrm{mm}" />. <Latex math="M = 10{,}000\,\mathrm{N{\cdot}mm}" />.
+                        </div>
+
+                        {WLBanner()}
+
+                        {(() => {
+                            // ── Shared constants ───────────────────────────────────────────────────
+                            const plate = cm_plates[1]; // Vi 3.5mm Narrow: I_p=28.67, y=1.60
+                            const E_St   = 187500; const E_bone = 18000;
+                            const n_St   = E_St / E_bone;
+                            const r_bone = 8.5;
+                            const A_b = 150; const I_b = 10000; const M = 10000;
+                            const K_bone = 50000;
+                            const A_p  = 3 * plate.I_p / (plate.y * plate.y); // rect. section identity
+
+                            // Model 1: Composite beam (L-independent)
+                            const D_i  = r_bone + plate.y;
+                            const dp   = A_b * D_i / (n_St * A_p + A_b);
+                            const db   = D_i - dp;
+                            const AMI  = n_St * (plate.I_p + A_p * dp * dp) + (I_b + A_b * db * db);
+                            const s1   = n_St * M * (dp + plate.y) / AMI;
+
+                            // Model 2: Spring K model at bannerWL (L-dependent)
+                            const getS2 = (L) => {
+                                const K = E_St * plate.I_p / L;
+                                return M * (K / (K + K_bone)) * plate.y / plate.I_p;
+                            };
+                            const s2 = getS2(bannerWL);
+
+                            // Model 3: Pre-closure (plate alone, L-independent)
+                            const s3 = M * plate.y / plate.I_p;
+
+                            // Crossover L where spring model equals composite beam stress.
+                            // stress_spring(L) = M*(K/(K+K_bone))*y/I_p = s1
+                            // → K/(K+K_bone) = s1*I_p/(M*y) =: composite_plate_fraction
+                            // → L_cross = E*I_p*(1-composite_plate_fraction)/(composite_plate_fraction*K_bone)
+                            const composite_plate_fraction = s1 * plate.I_p / (M * plate.y);
+                            const L_cross = composite_plate_fraction < 1 ? (E_St * plate.I_p * (1 - composite_plate_fraction)) / (composite_plate_fraction * K_bone) : Infinity;
+
+                            // ── Chart geometry ─────────────────────────────────────────────────────
+                            const PL = 64; const PR = 16; const PT = 16; const PB = 44;
+                            const W = 520; const H = 260;
+                            const PW = W - PL - PR; const PH = H - PT - PB;
+                            const yMax = 600;
+                            const mx = (L) => PL + (L - 2) / 98 * PW;
+                            const my = (s) => PT + PH - (s / yMax) * PH;
+
+                            // Spring curve points
+                            const springPts = [];
+                            for (let L = 2; L <= 100; L += 1) springPts.push([mx(L), my(getS2(L))]);
+                            const springPath = springPts.map((p, i) => (i === 0 ? `M${p[0].toFixed(1)},${p[1].toFixed(1)}` : `L${p[0].toFixed(1)},${p[1].toFixed(1)}`)).join(' ');
+
+                            // Y-axis grid lines every 100 MPa
+                            const yTicks = [0, 100, 200, 300, 400, 500, 600];
+
+                            const cursorX = mx(bannerWL);
+                            const s2Y = my(s2);
+                            const s1Y = my(s1);
+                            const s3Y = my(s3);
+
+                            return (
+                                <div className="space-y-4">
+                                    {/* Scorecard */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/50 rounded-xl p-3 flex flex-col items-center text-center">
+                                            <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400 mb-1">Model 1 — Composite Beam</span>
+                                            <span className="text-2xl font-bold text-teal-600 dark:text-teal-300">{s1.toFixed(1)}</span>
+                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>constant, any L</em></span>
+                                            <span className="text-[9px] text-teal-600 dark:text-teal-500 mt-1 italic">Cortical contact intact; composite AMI shared</span>
+                                        </div>
+                                        <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 flex flex-col items-center text-center">
+                                            <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400 mb-1">Model 2 — Spring K (at L = {bannerWL} mm)</span>
+                                            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">{s2.toFixed(1)}</span>
+                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>decreases with L</em></span>
+                                            <span className="text-[9px] text-indigo-600 dark:text-indigo-500 mt-1 italic">{(s2/s1).toFixed(0)}× higher than composite beam</span>
+                                        </div>
+                                        <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/50 rounded-xl p-3 flex flex-col items-center text-center">
+                                            <span className="text-[10px] font-semibold text-rose-700 dark:text-rose-400 mb-1">Model 3 — Pre-Closure (plate alone)</span>
+                                            <span className="text-2xl font-bold text-rose-600 dark:text-rose-300">{s3.toFixed(1)}</span>
+                                            <span className="text-[9px] text-slate-500 dark:text-slate-400">MPa — <em>constant, any L</em></span>
+                                            <span className="text-[9px] text-rose-600 dark:text-rose-500 mt-1 italic">{(s3/s1).toFixed(0)}× higher than composite beam</span>
+                                        </div>
+                                    </div>
+
+                                    {/* SVG chart */}
+                                    <div className="overflow-x-auto">
+                                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-2xl mx-auto block" style={{minWidth: '340px'}}>
+                                        {/* Grid & axes */}
+                                        {yTicks.map(s => (
+                                            <g key={s}>
+                                                <line x1={PL} y1={my(s)} x2={PL+PW} y2={my(s)} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-slate-700" />
+                                                <text x={PL-6} y={my(s)+4} textAnchor="end" fontSize="9" className="fill-slate-500 dark:fill-slate-400">{s}</text>
+                                            </g>
+                                        ))}
+                                        {/* x-axis labels */}
+                                        {[2,20,40,60,80,100].map(L => (
+                                            <g key={L}>
+                                                <line x1={mx(L)} y1={PT+PH} x2={mx(L)} y2={PT+PH+4} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
+                                                <text x={mx(L)} y={PT+PH+14} textAnchor="middle" fontSize="9" className="fill-slate-500 dark:fill-slate-400">{L}</text>
+                                            </g>
+                                        ))}
+                                        {/* axis borders */}
+                                        <line x1={PL} y1={PT} x2={PL} y2={PT+PH} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
+                                        <line x1={PL} y1={PT+PH} x2={PL+PW} y2={PT+PH} stroke="currentColor" strokeWidth="1" className="text-slate-400 dark:text-slate-500"/>
+                                        {/* axis labels */}
+                                        <text x={W/2} y={H-4} textAnchor="middle" fontSize="10" className="fill-slate-600 dark:fill-slate-400">Working Length L (mm)</text>
+                                        <text x={8} y={H/2} textAnchor="middle" fontSize="10" transform={`rotate(-90, 8, ${H/2})`} className="fill-slate-600 dark:fill-slate-400">σ (MPa)</text>
+
+                                        {/* Model 3: pre-closure flat line (rose) */}
+                                        <line x1={PL} y1={my(s3)} x2={PL+PW} y2={my(s3)} stroke="#f43f5e" strokeWidth="2" strokeDasharray="6 3" />
+                                        <text x={PL+PW-4} y={my(s3)-5} textAnchor="end" fontSize="9" fill="#f43f5e">Pre-closure (~{s3.toFixed(0)} MPa)</text>
+
+                                        {/* Model 2: spring model curve (indigo) */}
+                                        <path d={springPath} fill="none" stroke="#6366f1" strokeWidth="2.5"/>
+                                        <text x={PL+8} y={my(getS2(2))+12} fontSize="9" fill="#6366f1">Spring K model</text>
+
+                                        {/* Model 1: composite flat line (teal) */}
+                                        <line x1={PL} y1={my(s1)} x2={PL+PW} y2={my(s1)} stroke="#0d9488" strokeWidth="2.5" strokeDasharray="4 2"/>
+                                        <text x={PL+4} y={my(s1)-5} textAnchor="start" fontSize="9" fill="#0d9488">Composite beam (~{s1.toFixed(0)} MPa)</text>
+
+                                        {/* Cursor at bannerWL */}
+                                        <line x1={cursorX} y1={PT} x2={cursorX} y2={PT+PH} stroke="#64748b" strokeWidth="1.5" strokeDasharray="4 3"/>
+                                        {/* Dots at cursor */}
+                                        <circle cx={cursorX} cy={s2Y} r="4" fill="#6366f1"/>
+                                        <circle cx={cursorX} cy={s1Y} r="4" fill="#0d9488"/>
+
+                                        {/* Cursor label */}
+                                        {(() => {
+                                            const lx = cursorX + (bannerWL > 75 ? -6 : 6);
+                                            const anchor = bannerWL > 75 ? 'end' : 'start';
+                                            return <text x={lx} y={PT+10} fontSize="9" textAnchor={anchor} className="fill-slate-600 dark:fill-slate-300">L = {bannerWL} mm</text>;
+                                        })()}
+                                    </svg>
+                                    </div>
+
+                                    {/* Conclusion */}
+                                    <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-200 dark:border-teal-800/50 p-4 rounded-xl text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                                        <strong className="text-teal-700 dark:text-teal-400 block">Key Insight: The Enormous Protective Effect of Compressive Reduction</strong>
+                                        <p className="leading-relaxed">
+                                            At the current working length of <strong>{bannerWL} mm</strong>, compressive reduction reduces plate stress by a factor of <strong>~{(s2/s1).toFixed(0)}&times;</strong> compared to a fully open fracture without contact (spring model). The spring model stress is <strong>{s2.toFixed(0)} MPa</strong> versus <strong>{s1.toFixed(0)} MPa</strong> for the intact composite. The pre-closure scenario (plate alone) gives <strong>{s3.toFixed(0)} MPa</strong> — <strong>{(s3/s1).toFixed(0)}&times;</strong> the composite value.
+                                        </p>
+                                        <p className="leading-relaxed">
+                                            Use the banner above to explore whether extending working length in the spring model can overcome this advantage. Notice that the spring-model stress curve (purple) decreases with L but converges toward the composite line (teal) only at an L of approximately <strong>{L_cross < 10000 ? `${(L_cross/1000).toFixed(1)} m` : '&gt; 10 m'}</strong> — far outside any clinical construct. <em>Compressive cortical contact, not span extension, is what produces the dramatic AMI-mediated protection.</em>
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 

@@ -12,16 +12,23 @@
 **Type:** 6-tab interactive teaching tool with live calculators.
 **Scope:** Calibrated for a medium-sized canine bone (I_bone reference = 10,000 mm⁴). Absolute numbers do not transfer directly to human patients.
 
-### v1.2 changelog (this release)
-- New **Tab 1, Section 3 — "When Is the Composite-Beam Assumption Valid? Three Models for Three Regimes"** — derives the bending-moment validity ceiling `M_decomp = P·I_b/(A_b·c)` from the inter-fragmentary pre-load, and introduces the three structural models (composite beam, parallel-spring discontinuous beam, small-gap) with their formulas, validity ranges, and limitations.
-- Tab 1 sections renumbered and retitled with explicit model attribution:
+### v1.3 changelog (current release)
+- **Tab 1 section renumbering** — sections now correctly reflect the current order in the app:
   - Section 4 — *The Material Compliance Paradox* (Composite-Beam Model)
   - Section 5 — *The Geometric Contrast — Changing Plate Size* (Composite-Beam Model)
-  - Section 6 — *Span–Material Equivalence* (Spring Model — Discontinuous Beam)
-  - Section 7 — *The Verdict: Material vs. Span vs. Geometry* (Spring Model — Discontinuous Beam)
-  - Section 8 — *The Realistic 1 mm Interfragmentary Gap* (Small-Gap Model)
-- Tab 1 introduction rewritten to set up the three-regime framework (and to drop the previous "open-gap loading" framing, which conflicts with the pre-load resolution of the paradox).
-- Section 8 (small-gap) framing now explicitly includes the case where peri-fracture bone resorption develops *after* a perfect compressive reduction, causing the construct to migrate from the composite-beam regime into the small-gap regime as the pre-load is lost.
+  - Section 6 — *The Verdict: Material vs. Span vs. Geometry* (Composite-Beam Model)
+  - Section 7 — *Span–Material Equivalence* (Spring Model — Discontinuous Beam)
+  - Section 8 — *The Mathematical Verdict* (Spring Model — Discontinuous Beam)
+  - Section 9 — *The Realistic 1 mm Interfragmentary Gap* (Small-Gap Model)
+  - **Section 10 — *How Much Does Compressive Reduction Actually Protect the Implant?* (Three-Model Comparison)** — NEW in v1.3
+- **Section 6 geometry card** now uses the canonical `cm_plates` set (Vi 2.7mm DCP, Vi 3.5mm Narrow, Vi 3.5mm Broad, Vi 4.5mm Broad — same plates as Sections 8 & 9).
+- **WLBanner** (working-length slider 2–100 mm) now shared across Sections 7, 8, 9 & 10.
+- **Section 10** is a new standalone section that compares all three models under identical conditions: Vi 3.5mm Narrow DCP, 316L Steel, same bone geometry (I_b=10,000 mm⁴, A_b=150 mm², r_bone=8.5 mm), M=10,000 N·mm. See details in Section F below.
+
+### v1.2 changelog
+- New **Tab 1, Section 3 — "When Is the Composite-Beam Assumption Valid? Three Models for Three Regimes"** — derives the bending-moment validity ceiling `M_decomp = P·I_b/(A_b·c)` from the inter-fragmentary pre-load, and introduces the three structural models (composite beam, parallel-spring discontinuous beam, small-gap) with their formulas, validity ranges, and limitations.
+- Tab 1 introduction rewritten to set up the three-regime framework.
+- Section 9 (small-gap) framing explicitly includes the case where peri-fracture bone resorption develops *after* a perfect compressive reduction, causing the construct to migrate from the composite-beam regime into the small-gap regime as the pre-load is lost.
 
 ---
 
@@ -55,7 +62,7 @@ M ≤ M_decomp = σ_pre·I_b / c = P·I_b / (A_b·c)
 - Above `M_decomp`, but with the compression-side cortex still touching → discontinuous beam joined by a rotational spring at the fracture interface → **Model 2 (Parallel-Spring)** applies.
 - If a residual interfragmentary gap exists (imperfect reduction OR peri-fracture bone resorption that develops after a perfect compressive reduction and erases the pre-load) → **Model 3 below in Section E (Small-Gap, M_close)** applies for pure bending; **Model 3 (P-Delta)** applies for axial-load bridging.
 
-### Model 1: Composite-Beam / Transformed Section (Tab 1, Sections 4 & 5)
+### Model 1: Composite-Beam / Transformed Section (Tab 1, Sections 4, 5 & 6)
 
 **Applies to:** well-reduced, COMPRESSED constructs under FOUR-POINT BENDING with full bone-to-bone contact across the fracture line, with the applied bending moment satisfying `M ≤ M_decomp`.
 
@@ -78,9 +85,9 @@ sigma_plate   = n * (M * y) / Composite_AMI
 - A more compliant implant (lower n) → LOWER plate stress. This is the "Material Compliance Paradox" (Tab 1, Section 4) — counter-intuitive but follows directly from the formula.
 - Changing only THICKNESS of the same material (no n change) → I_p and A_p grow → Composite AMI rises → stress drops, but with diminishing returns because the neutral axis migrates toward the thicker plate.
 
-### Model 2: Parallel-Spring (Discontinuous Beam) / Load-Sharing (Tab 1, Sections 6 & 7)
+### Model 2: Parallel-Spring (Discontinuous Beam) / Load-Sharing (Tab 1, Sections 7 & 8)
 
-**Applies to:** the same physical setup as Model 1, but in the bending-moment regime where `M > M_decomp` and the gap on the tension side opens. The compression-side cortex still touches, so the bone behaves as a discontinuous beam joined by a rotational spring at the fracture interface. Sections 6 & 7 use this model to explain how WORKING LENGTH (L) affects plate stress.
+**Applies to:** the same physical setup as Model 1, but in the bending-moment regime where `M > M_decomp` and the gap on the tension side opens. The compression-side cortex still touches, so the bone behaves as a discontinuous beam joined by a rotational spring at the fracture interface. Sections 7 & 8 use this model to explain how WORKING LENGTH (L) affects plate stress.
 
 **Mechanism:** plate and bone behave as two rotational springs in parallel at the fracture plane. Each carries a share of the total moment proportional to its rotational stiffness.
 
@@ -111,7 +118,7 @@ sigma_plate = M_plate × y / I_plate
 - L appears in K_plate (not K_bone). Longer L → smaller K_plate → plate is "softer" → bone takes a larger share of the moment → plate stress DROPS. Rate at L=60 mm: ~2.5 MPa/mm for Ti, ~2.4 MPa/mm for Steel; steeper at short L, shallower at long L. Working-length range in the app: 2–100 mm.
 - Same material logic as Model 1: stiffer plate (higher E) → higher K_plate → larger share of the moment → higher plate stress. Steel > Titanium. At L=60 mm: σ_Steel ≈ 366 MPa, σ_Ti ≈ 293 MPa (Δ = −73 MPa). To achieve the same −73 MPa reduction on the Steel plate by extending L instead, you need ΔL ≈ +38 mm (to L ≈ 98 mm).
 - This safety of long L is SPECIFIC to closed-gap load-sharing. In the P-Delta model the relationship inverts.
-- IMPORTANT FRAMEWORK NOTE: Model 1 and Model 2 describe the same physical setup at different bending-moment regimes. They produce different absolute numbers (~20 MPa from Model 1 vs ~293 MPa from Model 2 at the same reference load) and cannot be placed on the same number line. Both are internally valid teaching tools.
+- IMPORTANT FRAMEWORK NOTE: Model 1 and Model 2 describe the same physical setup at different bending-moment regimes. They produce different absolute numbers (~20 MPa from Model 1 vs ~293 MPa from Model 2 at the same reference load) and cannot be placed on the same number line. Both are internally valid teaching tools. Section 10 shows the comparison between all three models at identical inputs; they are plotted on the same axis as a teaching illustration — NOT as a claim that they describe the same mechanical state.
 
 ### Model 3: P-Delta / Secant Beam-Column (Tab 3)
 
@@ -177,9 +184,9 @@ sigma = M * y / I_p
 
 ---
 
-## Section E — The 1 mm Gap Scenario / Small-Gap Model (Tab 1, Section 8)
+## Section E — The 1 mm Gap Scenario / Small-Gap Model (Tab 1, Section 9)
 
-This concept reconciles the conclusions from the composite/load-sharing models (Sections 4–7) with the reality that a residual interfragmentary gap is common — **either** because cortical reduction is rarely perfect, **or** because peri-fracture bone resorption develops after a perfect compressive reduction, erasing the pre-load and migrating the construct from the composite-beam regime (Sections 4 & 5) into this small-gap regime. The app uses a 1 mm interfragmentary gap as the standard comparison baseline.
+This concept reconciles the conclusions from the composite/load-sharing models (Sections 4–8) with the reality that a residual interfragmentary gap is common — **either** because cortical reduction is rarely perfect, **or** because peri-fracture bone resorption develops after a perfect compressive reduction, erasing the pre-load and migrating the construct from the composite-beam regime (Sections 4 & 5) into this small-gap regime. The app uses a 1 mm interfragmentary gap as the standard comparison baseline.
 
 ### Gap closure under pure bending
 A small interfragmentary gap closes under a **bending moment alone** — axial loading is NOT required. As the construct flexes, the far cortex contacts first. The near cortex opens slightly. The app approximates this as immediate uniform bone-to-bone contact across the full cross-section once M reaches M_close. This is explicitly stated as an approximation: it slightly overestimates load-sharing at the moment of first contact, giving an optimistic (lower) bound for plate stress in the post-closure regime.
@@ -236,12 +243,47 @@ When asked any question about plate stress or construct behaviour, FIRST identif
 
 | Scenario | Model |
 |---|---|
-| Compressed, closed-gap, bone-on-bone contact, bending moment below `M_decomp = P·I_b/(A_b·c)`, asking about MATERIAL or PLATE GEOMETRY | Model 1 (Composite-Beam — Tab 1 Sections 4 & 5) |
-| Compressed, closed-gap, bone-on-bone contact, bending moment above `M_decomp` (gap on tension side opens, compression-side cortex still touches), asking about WORKING LENGTH or LOAD SHARING | Model 2 (Parallel-Spring / Discontinuous Beam — Tab 1 Sections 6 & 7) |
-| Pure-bending construct with a small residual interfragmentary gap (imperfect reduction OR peri-fracture resorption after a perfect reduction) | Small-Gap Model (Tab 1 Section 8) |
+| Compressed, closed-gap, bone-on-bone contact, bending moment below `M_decomp = P·I_b/(A_b·c)`, asking about MATERIAL or PLATE GEOMETRY | Model 1 (Composite-Beam — Tab 1 Sections 4, 5 & 6) |
+| Compressed, closed-gap, bone-on-bone contact, bending moment above `M_decomp` (gap on tension side opens, compression-side cortex still touches), asking about WORKING LENGTH or LOAD SHARING | Model 2 (Parallel-Spring / Discontinuous Beam — Tab 1 Sections 7 & 8) |
+| Pure-bending construct with a small residual interfragmentary gap (imperfect reduction OR peri-fracture resorption after a perfect reduction) | Small-Gap Model (Tab 1 Section 9) |
 | Bridging (persistent gap with axial load), OR open-gap loading with axial load | Model 3 (P-Delta — Tab 3) |
+| Comparing all three models at identical inputs to see how much compressive reduction protects the implant | Tab 1 Section 10 (Three-Model Comparison) |
 
 The same parameter (e.g., L, or material choice) can have OPPOSITE effects in different models. Never carry a conclusion from one model into another.
+
+---
+
+## Section F — Three-Model Comparison: How Much Does Compressive Reduction Protect the Implant? (Tab 1, Section 10)
+
+**Purpose:** Section 10 places all three models on the same axis with identical inputs so the student can see, at a glance, the enormous protective effect of compressive cortical contact.
+
+**Fixed inputs used in Section 10:**
+- Plate: Vi 3.5mm Narrow DCP, 316L Steel — I_p = 28.67 mm⁴, y = 1.60 mm
+- Bone: I_b = 10,000 mm⁴, A_b = 150 mm², r_bone = 8.5 mm
+- Modular ratio: n = 187,500 / 18,000 ≈ 10.42 (steel / bone)
+- Applied moment: M = 10,000 N·mm
+- K_bone = 50,000 N·mm/rad
+
+**Model 1 — Composite Beam (L-independent):**
+- Transforms the plate using n; calculates composite AMI; computes σ = n·M·(d_p + y)/AMI_composite
+- Typical result: ~23 MPa — constant regardless of working length
+- This is the stress when compressive reduction holds and the bending moment stays below M_decomp
+
+**Model 2 — Spring K at current L:**
+- σ_spring = M · [E·I_p/L / (E·I_p/L + K_bone)] · y / I_p
+- Decreases as L increases; at L=10 mm ≈ 340 MPa; at L=100 mm ≈ 84 MPa
+- Even at very long L, it remains far above the composite-beam value (~23 MPa)
+
+**Model 3 — Pre-closure (plate alone, L-independent):**
+- σ = M · y / I_p = 10,000 × 1.60 / 28.67 ≈ 558 MPa — plate bears 100% of the moment
+- This is the worst case: no bone contact at all
+
+**Key teaching point:**
+The composite beam stress (~23 MPa) is 15–20× lower than the spring model at clinically relevant L values, and ~24× lower than the pre-closure scenario. Extending working length in the spring model (Model 2) reduces stress, but the spring-model curve approaches the composite-beam line only at L values in the range of several metres — far outside clinical constructs. The conclusion is that compressive cortical contact (not span extension) is what produces the dramatic implant protection.
+
+**The WLBanner is shared with Sections 7, 8, 9 & 10.** Moving the slider in Section 10 changes the Model 2 (spring) stress reading and updates the scorecard and cursor on the SVG chart.
+
+**Caveat for the AI tutor:** Section 10 places Model 1 and Model 2 values on the same stress axis to illustrate their relative magnitudes. This is a teaching comparison, NOT a claim that the two formulas describe the same mechanical state. Model 1 applies when the fracture is compressed and M < M_decomp; Model 2 applies when M > M_decomp. At any real applied moment only ONE of these models is valid. The AI tutor must always clarify this if asked.
 
 ---
 
