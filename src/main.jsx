@@ -2538,7 +2538,8 @@ if (typeof window !== 'undefined') {
                             const maxMc = 20000;
                             const mapX = (L) => 50 + ((L - minL) / (maxL - minL)) * 400;
                             const mapY = (M) => 250 - (Math.min(M, maxMc) / maxMc) * 200;
-                            const I_std = 25; const I_large = cm_plates[2].I_p; // 74.09
+                            // Four colours — one per plate size (same colour for both materials)
+                            const PCOL = ['#6b7280', '#f59e0b', '#3b82f6', '#8b5cf6'];
                             const pts = (E, I_p) => {
                                 const arr = [];
                                 for (let L = minL; L <= maxL; L += 2) {
@@ -2547,68 +2548,78 @@ if (typeof window !== 'undefined') {
                                 return arr;
                             };
                             const pathFor = (E, I_p) => pts(E, I_p).map(p => `${mapX(p.L)},${mapY(p.M)}`).join(' L ');
-                            // Critical L where M_close = CM_M
                             const lcrit = (E, I_p) => (E * I_p * CM_gap) / (CM_M * CM_Dbone);
-                            const lTi = lcrit(CM_E_Ti, I_std);
-                            const lSt = lcrit(CM_E_St, I_std);
-                            const lLg = lcrit(CM_E_Ti, I_large);
                             return (
                                 <div className="mt-2">
                                     <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
                                         <strong><Latex math="M_{close}" /> vs Working Length</strong> — the graph shows how the gap-closure moment falls as <Latex math="L" /> increases. The horizontal dashed line marks the reference clinical moment (10,000 N·mm). Where a curve crosses that line is the <em>minimum L</em> needed for load-sharing to occur. Drag the amber handle (or use the banner above) to move the current <Latex math="L" /> marker.
                                     </p>
                                     <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-[10px] text-slate-600 dark:text-slate-400 mb-2">
-                                        <strong className="text-slate-700 dark:text-slate-200">Curve legend:</strong> The three curves use a single representative <strong>"standard" plate cross-section</strong> with <Latex math={'I_p = 25\\,\\mathrm{mm}^4'} /> — a generic mid-range geometry that sits between the Vi 2.7 mm DCP (<Latex math={'I_p \\approx 10.4'} />) and the Vi 3.5 mm Narrow DCP (<Latex math={'I_p \\approx 28.7'} />). It is <em>not</em> a specific Vi catalogue plate. The <strong>"Ti large"</strong> curve uses the <strong>Vi 3.5 mm Broad DCP</strong> (12 × 4.2 mm, <Latex math={'I_p = 74.09\\,\\mathrm{mm}^4'} />) so that material (<Latex math="E" />) and geometry (<Latex math="I_p" />) are isolated as independent variables: Ti std vs Steel std isolates material; Ti std vs Ti large isolates geometry.
+                                        <strong className="text-slate-700 dark:text-slate-200">Curve legend:</strong> 8 curves — all four Vi plates from Card 3 in both <strong>316L Steel (solid line)</strong> and <strong>Titanium (dashed line)</strong>, using the same colour per plate size. Comparing solid vs dashed isolates material; comparing colours isolates geometry; dragging the slider isolates working length. Curves that never cross the M = 10,000 N·mm reference line stay above it for the full range shown — those constructs never achieve gap closure at the clinical moment.
                                     </div>
-                                    <svg viewBox="0 0 500 290" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
+                                    <svg viewBox="0 0 500 310" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
                                         {/* Axes */}
-                                        <line x1="50" y1="50" x2="50" y2="250" className="stroke-slate-300 dark:stroke-slate-700 stroke-2" />
-                                        <line x1="50" y1="250" x2="450" y2="250" className="stroke-slate-400 stroke-2" />
-                                        <text x="250" y="268" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Working Length, L (mm)</text>
-                                        <text x="18" y="150" className="fill-amber-600 dark:fill-amber-400 text-[8px] font-bold uppercase tracking-widest" transform="rotate(-90 18 150)" textAnchor="middle">M_close (N·mm)</text>
+                                        <line x1="50" y1="50" x2="50" y2="250" stroke="#cbd5e1" strokeWidth="2" />
+                                        <line x1="50" y1="250" x2="450" y2="250" stroke="#94a3b8" strokeWidth="2" />
+                                        <text x="250" y="268" fill="#64748b" fontSize="8" fontWeight="bold" textAnchor="middle">Working Length, L (mm)</text>
+                                        <text x="18" y="150" fill="#d97706" fontSize="8" fontWeight="bold" transform="rotate(-90 18 150)" textAnchor="middle">M_close (N·mm)</text>
                                         {/* Y labels */}
-                                        <text x="45" y="53" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">≥20k</text>
-                                        <text x="45" y="153" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">10k</text>
-                                        <text x="45" y="253" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">0</text>
+                                        <text x="45" y="53" fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">≥20k</text>
+                                        <text x="45" y="153" fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">10k</text>
+                                        <text x="45" y="253" fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">0</text>
                                         {/* X labels */}
-                                        <text x="50"  y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">2</text>
-                                        <text x="170" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">30</text>
-                                        <text x="250" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">50</text>
-                                        <text x="450" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">100</text>
-                                        {/* Clinical moment reference band */}
-                                        <line x1="50" y1={mapY(CM_M)} x2="450" y2={mapY(CM_M)} strokeDasharray="6 3" className="stroke-amber-500 dark:stroke-amber-400 stroke-[1.5px]" />
-                                        <text x="452" y={mapY(CM_M) - 3} className="fill-amber-600 dark:fill-amber-400 text-[7px] font-bold">M = {CM_M.toLocaleString()} N·mm</text>
-                                        {/* Curves */}
-                                        <path d={`M ${pathFor(CM_E_Ti, I_std)}`} fill="none" className="stroke-emerald-500 stroke-[2.5px]" />
-                                        <path d={`M ${pathFor(CM_E_St, I_std)}`} fill="none" className="stroke-rose-500 stroke-[2.5px]" />
-                                        <path d={`M ${pathFor(CM_E_Ti, I_large)}`} fill="none" className="stroke-blue-500 stroke-[2.5px]" />
-                                        {/* Critical L markers */}
-                                        {lTi >= minL && lTi <= maxL && <line x1={mapX(lTi)} y1={mapY(CM_M) - 5} x2={mapX(lTi)} y2={mapY(CM_M) + 5} className="stroke-emerald-500 stroke-2" />}
-                                        {lSt >= minL && lSt <= maxL && <line x1={mapX(lSt)} y1={mapY(CM_M) - 5} x2={mapX(lSt)} y2={mapY(CM_M) + 5} className="stroke-rose-500 stroke-2" />}
-                                        {lLg >= minL && lLg <= maxL && <line x1={mapX(lLg)} y1={mapY(CM_M) - 5} x2={mapX(lLg)} y2={mapY(CM_M) + 5} className="stroke-blue-500 stroke-2" />}
+                                        <text x="50"  y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">2</text>
+                                        <text x="170" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">30</text>
+                                        <text x="250" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">50</text>
+                                        <text x="450" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">100</text>
+                                        {/* Clinical moment reference line */}
+                                        <line x1="50" y1={mapY(CM_M)} x2="450" y2={mapY(CM_M)} strokeDasharray="6 3" stroke="#f59e0b" strokeWidth="1.5" />
+                                        <text x="452" y={mapY(CM_M) - 3} fill="#d97706" fontSize="7" fontWeight="bold">M = {CM_M.toLocaleString()} N·mm</text>
+                                        {/* 8 curves: Steel (solid) + Ti (dashed) for each of the 4 plates */}
+                                        {cm_plates.map((p, i) => {
+                                            const lS = lcrit(CM_E_St, p.I_p);
+                                            const lT = lcrit(CM_E_Ti, p.I_p);
+                                            return (
+                                                <React.Fragment key={i}>
+                                                    <path d={`M ${pathFor(CM_E_St, p.I_p)}`} fill="none" stroke={PCOL[i]} strokeWidth="2.5" />
+                                                    <path d={`M ${pathFor(CM_E_Ti, p.I_p)}`} fill="none" stroke={PCOL[i]} strokeWidth="2" strokeDasharray="6 3" />
+                                                    {lS >= minL && lS <= maxL && <line x1={mapX(lS)} y1={mapY(CM_M) - 5} x2={mapX(lS)} y2={mapY(CM_M) + 5} stroke={PCOL[i]} strokeWidth="2" />}
+                                                    {lT >= minL && lT <= maxL && <line x1={mapX(lT)} y1={mapY(CM_M) - 5} x2={mapX(lT)} y2={mapY(CM_M) + 5} stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                         {/* Current L marker */}
-                                        <line x1={mapX(bannerWL)} y1="50" x2={mapX(bannerWL)} y2="250" strokeDasharray="4 2" className="stroke-amber-400 dark:stroke-amber-500 stroke-[2px] opacity-80" />
-                                        <g transform={`translate(${mapX(bannerWL)}, 0)`} className="pointer-events-none">
-                                            <rect x="-20" y="50" width="40" height="15" rx="3" className="fill-amber-100 dark:fill-amber-900/80" />
-                                            <text x="0" y="61" className="fill-amber-800 dark:fill-amber-200 text-[7px] font-bold" textAnchor="middle">L={bannerWL}</text>
+                                        <line x1={mapX(bannerWL)} y1="50" x2={mapX(bannerWL)} y2="250" strokeDasharray="4 2" stroke="#fbbf24" strokeWidth="2" opacity="0.8" />
+                                        <g transform={`translate(${mapX(bannerWL)}, 0)`} style={{pointerEvents:'none'}}>
+                                            <rect x="-20" y="50" width="40" height="15" rx="3" fill="#fef3c7" />
+                                            <text x="0" y="61" fill="#92400e" fontSize="7" fontWeight="bold" textAnchor="middle">L={bannerWL}</text>
                                         </g>
                                         {/* Draggable handle */}
-                                        <circle cx={mapX(bannerWL)} cy="50" r="6" className="fill-amber-400 stroke-white stroke-2 cursor-ew-resize" />
-                                        {/* Legend */}
-                                        <g transform="translate(60, 58)">
-                                            <rect x="0" y="0" width="180" height="56" rx="3" className="fill-white/90 dark:fill-slate-800/90" />
-                                            <line x1="6" y1="12" x2="20" y2="12" className="stroke-emerald-500 stroke-2" />
-                                            <text x="24" y="15" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti std (I_p=25) — L_crit≈{Math.round(lTi)} mm</text>
-                                            <line x1="6" y1="28" x2="20" y2="28" className="stroke-rose-500 stroke-2" />
-                                            <text x="24" y="31" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Steel std (I_p=25) — L_crit≈{Math.round(lSt)} mm</text>
-                                            <line x1="6" y1="44" x2="20" y2="44" className="stroke-blue-500 stroke-2" />
-                                            <text x="24" y="47" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti large (I_p=74) — L_crit≈{Math.round(lLg)} mm</text>
+                                        <circle cx={mapX(bannerWL)} cy="50" r="6" fill="#fbbf24" stroke="white" strokeWidth="2" style={{cursor:'ew-resize'}} />
+                                        {/* Legend — 4 plate rows, solid=Steel / dashed=Ti */}
+                                        <g transform="translate(260, 56)">
+                                            <rect x="0" y="0" width="190" height="86" rx="3" fill="white" fillOpacity="0.92" />
+                                            <text x="4" y="10" fill="#475569" fontSize="7" fontWeight="bold">Solid = Steel  |  Dashed = Ti</text>
+                                            {cm_plates.map((p, i) => {
+                                                const lS = lcrit(CM_E_St, p.I_p);
+                                                const lT = lcrit(CM_E_Ti, p.I_p);
+                                                const lSStr = lS <= maxL ? `${Math.round(lS)}mm` : '>100mm';
+                                                const lTStr = lT <= maxL ? `${Math.round(lT)}mm` : '>100mm';
+                                                const y0 = 20 + i * 16;
+                                                return (
+                                                    <React.Fragment key={i}>
+                                                        <line x1="4" y1={y0+3} x2="18" y2={y0+3} stroke={PCOL[i]} strokeWidth="2.5" />
+                                                        <line x1="20" y1={y0+3} x2="34" y2={y0+3} stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
+                                                        <text x="38" y={y0+6} fill="#334155" fontSize="7.5">{p.name.replace('Vi ','')} — St:{lSStr} Ti:{lTStr}</text>
+                                                    </React.Fragment>
+                                                );
+                                            })}
                                         </g>
-                                        {/* Invisible drag rect for interaction */}
+                                        {/* Invisible drag rect */}
                                         <rect
                                             x="50" y="50" width="400" height="200"
                                             fill="transparent"
-                                            className="cursor-ew-resize"
+                                            style={{cursor:'ew-resize'}}
                                             onPointerDown={(e) => {
                                                 e.currentTarget.setPointerCapture(e.pointerId);
                                                 const r = e.currentTarget.ownerSVGElement.getBoundingClientRect();
@@ -2638,12 +2649,11 @@ if (typeof window !== 'undefined') {
                         {/* σ_post vs Working Length — companion graph */}
                         {(() => {
                             const minL = 2; const maxL = 100;
-                            const I_std = 25; const y_std = 1.5;
-                            const I_large = cm_plates[2].I_p; const y_large = cm_plates[2].y;
-                            // Compute post-closure stress curves; cap at pure-plate stress when M < M_close
+                            const PCOL = ['#6b7280', '#f59e0b', '#3b82f6', '#8b5cf6'];
+                            // Compute effective stress: plate alone when gap doesn't close, load-sharing otherwise
                             const sigPost = (E, I_p, y, L) => {
                                 const Mc = cm_mclose(E, I_p, L);
-                                if (Mc >= CM_M) return CM_M * y / I_p; // gap doesn't close: plate alone
+                                if (Mc >= CM_M) return CM_M * y / I_p;
                                 return cm_stress(E, I_p, y, L);
                             };
                             const pts = (E, I_p, y) => {
@@ -2653,75 +2663,84 @@ if (typeof window !== 'undefined') {
                                 }
                                 return arr;
                             };
-                            const ptsTi  = pts(CM_E_Ti, I_std,   y_std);
-                            const ptsSt  = pts(CM_E_St, I_std,   y_std);
-                            const ptsLg  = pts(CM_E_Ti, I_large, y_large);
-                            const allS = [...ptsTi, ...ptsSt, ...ptsLg].map(p => p.s);
+                            // Build all 8 curve datasets
+                            const curveSets = cm_plates.map(p => ({
+                                p,
+                                ptsSt: pts(CM_E_St, p.I_p, p.y),
+                                ptsTi: pts(CM_E_Ti, p.I_p, p.y),
+                                sNowSt: sigPost(CM_E_St, p.I_p, p.y, bannerWL),
+                                sNowTi: sigPost(CM_E_Ti, p.I_p, p.y, bannerWL),
+                            }));
+                            const allS = curveSets.flatMap(c => [...c.ptsSt, ...c.ptsTi].map(p => p.s));
                             const sMax = Math.max(...allS);
-                            const sCap = Math.min(sMax, 1500); // hard cap so pre-closure plate-alone spikes don't dominate
+                            const sCap = Math.min(sMax, 1500);
                             const mapX = (L) => 50 + ((L - minL) / (maxL - minL)) * 400;
                             const mapY = (s) => 250 - (Math.min(s, sCap) / sCap) * 200;
                             const pathFor = (arr) => arr.map(p => `${mapX(p.L)},${mapY(p.s)}`).join(' L ');
-                            // Critical L for each curve (where sigma transitions from plate-alone to load-sharing)
                             const lcrit = (E, I_p) => (E * I_p * CM_gap) / (CM_M * CM_Dbone);
-                            const lTi = lcrit(CM_E_Ti, I_std);
-                            const lSt = lcrit(CM_E_St, I_std);
-                            const lLg = lcrit(CM_E_Ti, I_large);
-                            // Current σ_post values at bannerWL
-                            const sNowTi = sigPost(CM_E_Ti, I_std,   y_std,   bannerWL);
-                            const sNowSt = sigPost(CM_E_St, I_std,   y_std,   bannerWL);
-                            const sNowLg = sigPost(CM_E_Ti, I_large, y_large, bannerWL);
                             return (
                                 <div className="mt-4">
                                     <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
-                                        <strong>Post-closure plate stress (<Latex math="\sigma_{post}" />) vs Working Length</strong> — companion graph showing the implant stress that actually matters for fatigue. To the <em>left</em> of each curve's critical <Latex math="L" /> the gap doesn't close at the clinical moment, so the plate carries the entire load (flat plateau at <Latex math={'\\sigma_{pre} = M y / I_p'} />). To the <em>right</em>, load-sharing begins and stress drops as <Latex math="L" /> grows. Drag the amber handle (or use the banner above) to inspect a given <Latex math="L" />.
+                                        <strong>Post-closure plate stress (<Latex math="\sigma_{post}" />) vs Working Length</strong> — companion graph showing the implant stress that actually matters for fatigue. To the <em>left</em> of each curve's critical <Latex math="L" /> the gap doesn't close at the clinical moment, so the plate carries the entire load (flat plateau at <Latex math={'\\sigma_{pre} = M y / I_p'} />). To the <em>right</em>, load-sharing begins and stress drops as <Latex math="L" /> grows. <strong>Solid = Steel, dashed = Titanium</strong>; colour identifies plate size. Drag the amber handle (or use the banner above) to inspect a given <Latex math="L" />.
                                     </p>
-                                    <svg viewBox="0 0 500 290" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
+                                    <svg viewBox="0 0 500 310" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
                                         {/* Axes */}
-                                        <line x1="50" y1="50" x2="50" y2="250" className="stroke-slate-300 dark:stroke-slate-700 stroke-2" />
-                                        <line x1="50" y1="250" x2="450" y2="250" className="stroke-slate-400 stroke-2" />
-                                        <text x="250" y="268" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Working Length, L (mm)</text>
-                                        <text x="18" y="150" className="fill-rose-600 dark:fill-rose-400 text-[8px] font-bold uppercase tracking-widest" transform="rotate(-90 18 150)" textAnchor="middle">σ_post (MPa)</text>
+                                        <line x1="50" y1="50" x2="50" y2="250" stroke="#cbd5e1" strokeWidth="2" />
+                                        <line x1="50" y1="250" x2="450" y2="250" stroke="#94a3b8" strokeWidth="2" />
+                                        <text x="250" y="268" fill="#64748b" fontSize="8" fontWeight="bold" textAnchor="middle">Working Length, L (mm)</text>
+                                        <text x="18" y="150" fill="#e11d48" fontSize="8" fontWeight="bold" transform="rotate(-90 18 150)" textAnchor="middle">σ_post (MPa)</text>
                                         {/* Y labels */}
-                                        <text x="45" y="53"  className="fill-slate-400 text-[8px] font-mono" textAnchor="end">{Math.round(sCap)}</text>
-                                        <text x="45" y="153" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">{Math.round(sCap/2)}</text>
-                                        <text x="45" y="253" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">0</text>
+                                        <text x="45" y="53"  fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">{Math.round(sCap)}</text>
+                                        <text x="45" y="153" fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">{Math.round(sCap/2)}</text>
+                                        <text x="45" y="253" fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">0</text>
                                         {/* X labels */}
-                                        <text x="50"  y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">2</text>
-                                        <text x="170" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">30</text>
-                                        <text x="250" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">50</text>
-                                        <text x="450" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">100</text>
-                                        {/* Curves */}
-                                        <path d={`M ${pathFor(ptsTi)}`} fill="none" className="stroke-emerald-500 stroke-[2.5px]" />
-                                        <path d={`M ${pathFor(ptsSt)}`} fill="none" className="stroke-rose-500 stroke-[2.5px]" />
-                                        <path d={`M ${pathFor(ptsLg)}`} fill="none" className="stroke-blue-500 stroke-[2.5px]" />
-                                        {/* Critical L markers (where load-sharing starts) */}
-                                        {lTi >= minL && lTi <= maxL && <line x1={mapX(lTi)} y1="245" x2={mapX(lTi)} y2="255" className="stroke-emerald-500 stroke-2" />}
-                                        {lSt >= minL && lSt <= maxL && <line x1={mapX(lSt)} y1="245" x2={mapX(lSt)} y2="255" className="stroke-rose-500 stroke-2" />}
-                                        {lLg >= minL && lLg <= maxL && <line x1={mapX(lLg)} y1="245" x2={mapX(lLg)} y2="255" className="stroke-blue-500 stroke-2" />}
+                                        <text x="50"  y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">2</text>
+                                        <text x="170" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">30</text>
+                                        <text x="250" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">50</text>
+                                        <text x="450" y="264" fill="#94a3b8" fontSize="7" textAnchor="middle">100</text>
+                                        {/* 8 curves: Steel (solid) + Ti (dashed) for each of the 4 plates */}
+                                        {curveSets.map((c, i) => {
+                                            const lS = lcrit(CM_E_St, c.p.I_p);
+                                            const lT = lcrit(CM_E_Ti, c.p.I_p);
+                                            return (
+                                                <React.Fragment key={i}>
+                                                    <path d={`M ${pathFor(c.ptsSt)}`} fill="none" stroke={PCOL[i]} strokeWidth="2.5" />
+                                                    <path d={`M ${pathFor(c.ptsTi)}`} fill="none" stroke={PCOL[i]} strokeWidth="2" strokeDasharray="6 3" />
+                                                    {lS >= minL && lS <= maxL && <line x1={mapX(lS)} y1="245" x2={mapX(lS)} y2="255" stroke={PCOL[i]} strokeWidth="2" />}
+                                                    {lT >= minL && lT <= maxL && <line x1={mapX(lT)} y1="245" x2={mapX(lT)} y2="255" stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                         {/* Current L marker */}
-                                        <line x1={mapX(bannerWL)} y1="50" x2={mapX(bannerWL)} y2="250" strokeDasharray="4 2" className="stroke-amber-400 dark:stroke-amber-500 stroke-[2px] opacity-80" />
-                                        <g transform={`translate(${mapX(bannerWL)}, 0)`} className="pointer-events-none">
-                                            <rect x="-20" y="50" width="40" height="15" rx="3" className="fill-amber-100 dark:fill-amber-900/80" />
-                                            <text x="0" y="61" className="fill-amber-800 dark:fill-amber-200 text-[7px] font-bold" textAnchor="middle">L={bannerWL}</text>
+                                        <line x1={mapX(bannerWL)} y1="50" x2={mapX(bannerWL)} y2="250" strokeDasharray="4 2" stroke="#fbbf24" strokeWidth="2" opacity="0.8" />
+                                        <g transform={`translate(${mapX(bannerWL)}, 0)`} style={{pointerEvents:'none'}}>
+                                            <rect x="-20" y="50" width="40" height="15" rx="3" fill="#fef3c7" />
+                                            <text x="0" y="61" fill="#92400e" fontSize="7" fontWeight="bold" textAnchor="middle">L={bannerWL}</text>
                                         </g>
                                         {/* Draggable handle */}
-                                        <circle cx={mapX(bannerWL)} cy="50" r="6" className="fill-amber-400 stroke-white stroke-2 cursor-ew-resize pointer-events-none" />
-                                        {/* Legend with live σ values */}
-                                        <g transform="translate(260, 58)">
-                                            <rect x="0" y="0" width="190" height="56" rx="3" className="fill-white/90 dark:fill-slate-800/90" />
-                                            <line x1="6" y1="12" x2="20" y2="12" className="stroke-emerald-500 stroke-2" />
-                                            <text x="24" y="15" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti std (I_p=25): σ = {Math.round(sNowTi)} MPa</text>
-                                            <line x1="6" y1="28" x2="20" y2="28" className="stroke-rose-500 stroke-2" />
-                                            <text x="24" y="31" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Steel std (I_p=25): σ = {Math.round(sNowSt)} MPa</text>
-                                            <line x1="6" y1="44" x2="20" y2="44" className="stroke-blue-500 stroke-2" />
-                                            <text x="24" y="47" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti large (I_p=74): σ = {Math.round(sNowLg)} MPa</text>
+                                        <circle cx={mapX(bannerWL)} cy="50" r="6" fill="#fbbf24" stroke="white" strokeWidth="2" style={{cursor:'ew-resize', pointerEvents:'none'}} />
+                                        {/* Legend with live σ values — 4 plate rows */}
+                                        <g transform="translate(50, 56)">
+                                            <rect x="0" y="0" width="195" height="86" rx="3" fill="white" fillOpacity="0.92" />
+                                            <text x="4" y="10" fill="#475569" fontSize="7" fontWeight="bold">Solid = Steel  |  Dashed = Ti</text>
+                                            {curveSets.map((c, i) => {
+                                                const y0 = 20 + i * 16;
+                                                return (
+                                                    <React.Fragment key={i}>
+                                                        <line x1="4" y1={y0+3} x2="18" y2={y0+3} stroke={PCOL[i]} strokeWidth="2.5" />
+                                                        <line x1="20" y1={y0+3} x2="34" y2={y0+3} stroke={PCOL[i]} strokeWidth="2" strokeDasharray="4 2" />
+                                                        <text x="38" y={y0+6} fill="#334155" fontSize="7.5">
+                                                            {c.p.name.replace('Vi ','')} St:{Math.round(c.sNowSt)} Ti:{Math.round(c.sNowTi)} MPa
+                                                        </text>
+                                                    </React.Fragment>
+                                                );
+                                            })}
                                         </g>
-                                        {/* Invisible drag rect for interaction */}
+                                        {/* Invisible drag rect */}
                                         <rect
                                             x="50" y="50" width="400" height="200"
                                             fill="transparent"
-                                            className="cursor-ew-resize"
+                                            style={{cursor:'ew-resize'}}
                                             onPointerDown={(e) => {
                                                 e.currentTarget.setPointerCapture(e.pointerId);
                                                 const r = e.currentTarget.ownerSVGElement.getBoundingClientRect();
