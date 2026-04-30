@@ -125,15 +125,17 @@ if (typeof window !== 'undefined') {
         };
 
         // --- MATH TOGGLE HELPER ---
-        const MathToggle = ({ children }) => {
+        const MathToggle = ({ children, label }) => {
             const [open, setOpen] = React.useState(false);
+            const showText = label || 'See the math';
+            const hideText = label ? `Hide ${label.replace(/^see\s+/i, '').replace(/^show\s+/i, '')}` : 'Hide the math';
             return (
                 <div>
                     <button
                         onClick={() => setOpen(o => !o)}
                         className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors mt-2"
                     >
-                        {open ? '▲ Hide the math' : '▼ See the math'}
+                        {open ? `▲ ${hideText}` : `▼ ${showText}`}
                     </button>
                     {open && <div className="fade-in mt-2">{children}</div>}
                 </div>
@@ -1653,14 +1655,18 @@ if (typeof window !== 'undefined') {
             };
 
             const WLBanner = () => (
-                <div className="bg-indigo-700 dark:bg-indigo-900 text-white px-4 py-2.5 rounded-xl shadow-md border border-indigo-500 dark:border-indigo-700 flex flex-col sm:flex-row items-center gap-3 mb-4">
-                    <div className="flex-shrink-0 text-xs font-bold tracking-wide whitespace-nowrap">
-                        🔧 Working Length&nbsp;
-                        <span className="text-xl font-extrabold text-amber-300">L = {bannerWL} mm</span>
+                <div className="bg-slate-50 dark:bg-slate-900 p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            Set Working Length (<Latex math={`L = ${bannerWL}\\,\\mathrm{mm}`} />)
+                        </label>
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 italic">
+                            Shared across Sections 5, 6 &amp; 7
+                        </span>
                     </div>
-                    <div className="flex-1 w-full">
+                    <div className="relative w-full flex flex-col items-center justify-center pt-1 select-none">
                         <div
-                            className="relative w-full h-7 flex items-center cursor-ew-resize select-none"
+                            className="relative w-full h-10 flex items-center cursor-ew-resize z-10"
                             style={{ touchAction: 'none' }}
                             ref={bannerSliderRef}
                             onPointerDown={handleBannerPointerDown}
@@ -1668,25 +1674,24 @@ if (typeof window !== 'undefined') {
                             onPointerUp={handleBannerPointerUp}
                             onPointerCancel={handleBannerPointerUp}
                         >
-                            <div className="w-full h-2 bg-indigo-500/60 rounded-full shadow-inner relative overflow-hidden pointer-events-none">
-                                <div className="absolute top-0 left-0 h-full bg-amber-300" style={{ width: `${((bannerWL - 2) / 98) * 100}%` }}></div>
+                            <div className="w-full h-2.5 bg-slate-300 dark:bg-slate-700 rounded-full shadow-inner relative overflow-hidden pointer-events-none">
+                                <div className="absolute top-0 left-0 h-full bg-blue-500" style={{ width: `${((bannerWL - 2) / 98) * 100}%` }}></div>
                             </div>
                             <div
-                                className="absolute h-5 w-5 bg-amber-400 rounded-full border-2 border-white shadow-md pointer-events-none"
+                                className="absolute h-6 w-6 bg-amber-500 rounded-full border-[3px] border-white shadow-md pointer-events-none flex items-center justify-center"
                                 style={{
-                                    left: `calc(${((bannerWL - 2) / 98) * 100}% - 10px)`,
+                                    left: `calc(${((bannerWL - 2) / 98) * 100}% - 12px)`,
                                     transform: bannerDragging ? 'scale(1.2)' : 'scale(1)',
                                     transition: bannerDragging ? 'none' : 'transform 0.15s ease-out'
                                 }}
-                            />
+                            >
+                                <div className="h-2 w-0.5 bg-white opacity-50 rounded"></div>
+                            </div>
                         </div>
-                        <div className="flex justify-between text-[9px] font-bold text-indigo-200 px-1 mt-0.5">
-                            <span>2 mm</span>
-                            <span>100 mm</span>
+                        <div className="w-full flex justify-between text-[10px] font-bold text-slate-400 px-1 mt-1">
+                            <span>L = 2 mm</span>
+                            <span>L = 100 mm</span>
                         </div>
-                    </div>
-                    <div className="flex-shrink-0 text-[9px] text-indigo-200 font-medium text-right whitespace-nowrap">
-                        Shared across Sections 5, 6 &amp; 7
                     </div>
                 </div>
             );
@@ -1944,7 +1949,7 @@ if (typeof window !== 'undefined') {
                                 As <Latex math="L" /> increases, <Latex math="K_{plate}" /> falls (∝ 1/L) while <Latex math="K_{bone}" /> stays constant. The fraction <Latex math="K_{plate}/(K_{plate}+K_{bone})" /> falls, so the plate carries less of the moment and plate stress drops. This benefit exists <em>only</em> because the fracture discontinuity makes <Latex math="K_{bone}" /> an interface property rather than a beam property. If the bone were continuous (no fracture), both stiffnesses would scale with 1/L equally, and changing L would shift no load at all.
                             </p>
                             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed mt-1">
-                                At the reference L = 60 mm: switching from Steel to Titanium drops plate stress by <strong>~73 MPa</strong>. To achieve the same reduction with a Steel plate by increasing L instead, you would need to extend L by <strong>~38 mm</strong> (from 60 → 98 mm). Use the global banner above and the graph below to verify this equivalence.
+                                At the reference L = 60 mm: switching from Steel to Titanium drops plate stress by <strong>~73 MPa</strong>. To achieve the same reduction with a Steel plate by increasing L instead, you would need to extend L by <strong>~38 mm</strong> (from 60 → 98 mm). Use the banner above and the graph below to verify this equivalence.
                             </p>
                         </div>
 
@@ -2018,7 +2023,7 @@ if (typeof window !== 'undefined') {
                                             <span className="text-[9px] text-slate-500 dark:text-slate-400">Steel rate at this L: ~{rate.toFixed(1)} MPa per mm of L</span>
                                         </div>
                                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                            <strong>Conclusion:</strong> Switching to Titanium reduces plate stress by ~{Math.round(dSig)} MPa at the current working length — <em>without adding bulk or increasing stress-shielding</em>. The equivalent span extension required on the Steel plate (~{Math.round(dL)} mm) illustrates how powerful the material choice is. Use the global banner to see how both values change across the full working-length range.
+                                            <strong>Conclusion:</strong> Switching to Titanium reduces plate stress by ~{Math.round(dSig)} MPa at the current working length — <em>without adding bulk or increasing stress-shielding</em>. The equivalent span extension required on the Steel plate (~{Math.round(dL)} mm) illustrates how powerful the material choice is. Use the banner above to see how both values change across the full working-length range.
                                         </p>
                                         </>
                                     );
@@ -2054,7 +2059,7 @@ if (typeof window !== 'undefined') {
                             <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-200 dark:border-blue-800/50 md:col-span-2 flex flex-col">
                                 <strong className="text-blue-700 dark:text-blue-400 text-sm block mb-2">3. Changing Geometry (Load-Sharing K Model)</strong>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mb-2 border-l-2 border-blue-300 dark:border-blue-700 pl-2">
-                                    *Note: Evaluated using the parallel-spring K model (Section 5) at current L = {bannerWL} mm, Titanium plate. Four representative Vi plates shown.
+                                    *Note: Evaluated using the parallel-spring K model (Section 5) at current L = {bannerWL} mm, <strong>316L Steel plate</strong>. Four representative Vi plates shown.
                                 </p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
                                     As plate size (<Latex math="I_p" />) increases, <Latex math="K_{plate}" /> rises (plate takes more moment) but <Latex math="I_p" /> in the denominator also rises (section resists stress better). The net effect is a meaningful stress reduction at each step — but in the K model the steps are larger than in the closed-gap composite model because the plate bears the full load-sharing burden:
@@ -2073,10 +2078,10 @@ if (typeof window !== 'undefined') {
                                     return (
                                         <ul className="space-y-2 text-[10px] font-mono text-slate-700 dark:text-slate-300 mb-4 bg-white dark:bg-slate-800 p-3 rounded border border-blue-200 dark:border-blue-700 shadow-sm">
                                         {steps.map((s, i) => {
-                                            const sFrom = cm_stress(CM_E_Ti, s.from.I_p, s.from.y, bannerWL);
-                                            const sTo   = cm_stress(CM_E_Ti, s.to.I_p,   s.to.y,   bannerWL);
+                                            const sFrom = cm_stress(CM_E_St, s.from.I_p, s.from.y, bannerWL);
+                                            const sTo   = cm_stress(CM_E_St, s.to.I_p,   s.to.y,   bannerWL);
                                             const delta = sFrom - sTo;
-                                            const rate  = Math.abs(cm_rate(CM_E_Ti, s.from.I_p, s.from.y, bannerWL));
+                                            const rate  = Math.abs(cm_rate(CM_E_St, s.from.I_p, s.from.y, bannerWL));
                                             const dLEquiv = rate > 0 ? delta / rate : 0;
                                             return (
                                                 <li key={i} className={`flex justify-between items-center ${i < 2 ? 'border-b ' + colors[i].border + ' pb-2' : ''} ${i > 0 ? 'pt-2' : ''}`}>
@@ -2092,7 +2097,7 @@ if (typeof window !== 'undefined') {
                                     );
                                 })()}
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mt-auto">
-                                    <strong>Conclusion:</strong> Each up-size step delivers a large absolute reduction in plate stress in the K load-sharing model. The "equivalent L increase" column shows how many millimetres of working-length extension on the smallest plate it would take to achieve the same stress drop — highlighting that geometry is a very powerful lever. <em>Critical caveat: this assumes cortical contact exists (closed gap). Concept 7 below shows how upsizing can paradoxically <strong>increase</strong> plate stress when a realistic 1 mm gap is present, because a stiffer plate raises M_close and may prevent gap closure entirely.</em>
+                                    <strong>Conclusion:</strong> Each up-size step delivers a large absolute reduction in plate stress in the K load-sharing model (shown here for steel — the stiffer material exposes the geometry effect most clearly). The "equivalent L increase" column shows how many millimetres of working-length extension on the smallest plate it would take to achieve the same stress drop — highlighting that geometry is a very powerful lever. <em>Critical caveat: this assumes cortical contact exists (closed gap). Concept 7 below shows how upsizing can paradoxically <strong>increase</strong> plate stress when a realistic 1 mm gap is present, because a stiffer plate raises M_close and may prevent gap closure entirely.</em>
                                 </p>
                             </div>
                         </div>
@@ -2129,10 +2134,29 @@ if (typeof window !== 'undefined') {
                         <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
                             <strong className="text-slate-800 dark:text-slate-200 text-sm block">The Gap-Closure Moment: M_close</strong>
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                The gap closes when the plate bends enough for the far cortex to touch. For a beam of stiffness K_plate under moment M, the end-rotation is <Latex math="\theta = M / K_{plate}" />. The gap closes when this rotation times the bone diameter equals the gap:
+                                The gap closes when the plate bends enough for the far cortex to touch. For a beam of stiffness <Latex math="K_{plate}" /> under moment <Latex math="M" />, the end-rotation is <Latex math="\theta = M / K_{plate}" />. The gap closes when this rotation times the bone diameter equals the gap:
                                 <Latex math="\theta \times D_{bone} = \text{gap}" />. Therefore:
                             </p>
-                            <MathToggle>
+                            <MathToggle label="Why θ = M / K_plate (derivation)">
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700 space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                                    <p><strong>What is <Latex math="\theta" />, and why <Latex math="\theta = M / K_{plate}" />?</strong></p>
+                                    <p>
+                                        <Latex math="\theta" /> is the <em>end-rotation angle</em> of the plate at the fracture line — the angle (in radians) by which one fragment tilts relative to the other as the plate flexes under the applied bending moment <Latex math="M" />. As the fragments rotate through <Latex math="\theta" />, the far cortex sweeps through an arc whose chord length is approximately <Latex math={'D_{bone} \\cdot \\theta'} />. When that chord equals the interfragmentary gap (1 mm), the cortices touch and load-sharing begins.
+                                    </p>
+                                    <p>
+                                        For any linear-elastic structural element loaded by a single moment, the rotation produced is moment over rotational stiffness — by definition of <Latex math="K_{plate}" /> as <em>moment per unit rotation</em>:
+                                    </p>
+                                    <p className="text-center"><Latex math={'K_{plate} \\equiv \\dfrac{M}{\\theta} \\quad\\Longrightarrow\\quad \\theta = \\dfrac{M}{K_{plate}}'} /></p>
+                                    <p>
+                                        The numerical value of <Latex math="K_{plate}" /> for the bridging plate comes from Euler–Bernoulli beam theory. For a uniform beam of length <Latex math="L" /> loaded by a single end-moment <Latex math="M" />, integration of the curvature equation <Latex math={'\\dfrac{d^2 y}{dx^2} = M / (E \\cdot I)'} /> gives an end-slope of <Latex math={'\\theta = M \\cdot L / (E \\cdot I_p)'} />, hence:
+                                    </p>
+                                    <p className="text-center"><Latex math={'K_{plate} = \\dfrac{M}{\\theta} = \\dfrac{E_p \\cdot I_p}{L}'} /></p>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                                        (Strictly this is the rotational stiffness of a cantilever-like bridging segment under a pure end-moment; different boundary conditions give different multipliers, but the proportionality <Latex math={'K_{plate} \\propto E I_p / L'} /> is the same.)
+                                    </p>
+                                </div>
+                            </MathToggle>
+                            <MathToggle label="See M_close numbers at this L">
                                 <div className="bg-white dark:bg-slate-800 p-3 rounded border border-slate-200 dark:border-slate-700 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                                     <p className="text-center"><Latex math={'M_{\\text{close}} = K_{\\text{plate}} \\times \\frac{\\text{gap}}{D_{\\text{bone}}} = \\frac{E_p \\cdot I_p}{L} \\times \\frac{\\text{gap}}{D_{\\text{bone}}}'} /></p>
                                     <p className="mt-2 font-semibold">At <Latex math="L" /> = {bannerWL} mm, <Latex math="\text{gap}" /> = 1 mm, <Latex math="D_{bone}" /> = 17 mm:</p>
@@ -2180,13 +2204,23 @@ if (typeof window !== 'undefined') {
                                 return (
                                     <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex flex-col">
                                         <strong className="text-emerald-700 dark:text-emerald-400 text-sm block mb-2">1. Steel → Titanium</strong>
-                                        <div className="bg-white dark:bg-slate-800 p-2 rounded border border-emerald-200 dark:border-emerald-700 text-[11px] mb-2 space-y-0.5">
-                                            <div><Latex math="M_{close}" /> Ti: <strong>{Math.round(mcTi).toLocaleString()} N·mm</strong></div>
-                                            <div><Latex math="M_{close}" /> St: <strong>{Math.round(mcSt).toLocaleString()} N·mm</strong></div>
-                                            <div className="text-[9px] text-slate-500 pt-0.5 border-t border-slate-100 dark:border-slate-700">Post-closure (M=10,000): Ti={Math.round(sTi)} MPa | St={Math.round(sSt)} MPa</div>
+                                        <div className="bg-white dark:bg-slate-800 p-2.5 rounded border border-emerald-200 dark:border-emerald-700 mb-2">
+                                            <div className="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-1">Post-closure plate stress (M = 10,000 N·mm)</div>
+                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                <span className="text-[11px] text-slate-600 dark:text-slate-300">Steel:</span>
+                                                <span className="text-base font-extrabold text-rose-600 dark:text-rose-400">{Math.round(sSt)} MPa</span>
+                                            </div>
+                                            <div className="flex justify-between items-baseline">
+                                                <span className="text-[11px] text-slate-600 dark:text-slate-300">Titanium:</span>
+                                                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">{Math.round(sTi)} MPa</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-500 dark:text-slate-400 pt-1 mt-1 border-t border-slate-200 dark:border-slate-700 flex justify-between">
+                                                <span><Latex math="M_{close}" /> Ti: {Math.round(mcTi).toLocaleString()} N·mm</span>
+                                                <span><Latex math="M_{close}" /> St: {Math.round(mcSt).toLocaleString()} N·mm</span>
+                                            </div>
                                         </div>
                                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
-                                            Lower E → lower <Latex math="K_{plate}" /> → lower <Latex math="M_{close}" />. Ti reaches load-sharing sooner. Post-closure plate stress is also lower (same as Section 5 result). Both mechanisms act in the same direction — Ti is unambiguously better in the gap scenario.
+                                            Lower E → lower <Latex math="K_{plate}" /> → lower <Latex math="M_{close}" />. Ti reaches load-sharing sooner. Post-closure plate stress (the metric that determines implant failure) is also lower (same as Section 5 result). Both mechanisms act in the same direction — Ti is unambiguously better in the gap scenario.
                                         </p>
                                         <button onClick={() => setOpenMath(o => !o)} className="mt-3 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 hover:underline">
                                             {openMath ? '▲ Hide math' : '▼ See full derivation'}
@@ -2258,19 +2292,22 @@ if (typeof window !== 'undefined') {
                                 );
                             })()}
 
-                            {/* Card 3: Geometry/Upsizing Paradox */}
+                            {/* Card 3: Geometry/Upsizing Paradox — Steel plate */}
                             {(() => {
                                 const [openMath, setOpenMath] = React.useState(false);
                                 const plateRows = cm_plates.map(p => ({
                                     name: p.name,
                                     I_p: p.I_p, y: p.y,
-                                    mc: cm_mclose(CM_E_Ti, p.I_p, bannerWL),
-                                    s_post: cm_stress(CM_E_Ti, p.I_p, p.y, bannerWL),
+                                    mc: cm_mclose(CM_E_St, p.I_p, bannerWL),
+                                    s_post: cm_stress(CM_E_St, p.I_p, p.y, bannerWL),
                                     s_pre: CM_M * p.y / p.I_p,  // plate alone (no sharing)
                                 }));
                                 return (
                                     <div className="bg-rose-50 dark:bg-rose-900/10 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 flex flex-col">
-                                        <strong className="text-rose-700 dark:text-rose-400 text-sm block mb-2">3. ↑ Plate Size (The Upsizing Paradox)</strong>
+                                        <strong className="text-rose-700 dark:text-rose-400 text-sm block mb-2">3. ↑ Plate Size — Steel (The Upsizing Paradox)</strong>
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mb-2 border-l-2 border-rose-300 dark:border-rose-700 pl-2">
+                                            *Note: Calculated for <strong>316L Steel</strong> (E = {CM_E_St.toLocaleString()} MPa). Steel exposes the paradox most clearly because its higher E pushes <Latex math="M_{close}" /> above the clinical moment for stiffer plates.
+                                        </p>
                                         <div className="bg-white dark:bg-slate-800 p-2 rounded border border-rose-200 dark:border-rose-700 text-[11px] mb-2 overflow-x-auto">
                                             <table className="w-full text-[10px]">
                                                 <thead><tr className="border-b border-slate-200 dark:border-slate-700"><th className="text-left pb-0.5">Plate</th><th className="text-right"><Latex math="M_{close}" /></th><th className="text-right"><Latex math="\sigma_{pre}" /></th><th className="text-right"><Latex math="\sigma_{post}" /></th></tr></thead>
@@ -2291,7 +2328,7 @@ if (typeof window !== 'undefined') {
                                             <div className="text-[8px] text-slate-400 mt-1">σ in MPa. ⚠ = gap never closes at M=10,000 N·mm (M_close &gt; 10,000). <Latex math="\sigma_{post}" /> shown only when gap closes.</div>
                                         </div>
                                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
-                                            A larger plate raises <Latex math="K_{plate}" /> → raises <Latex math="M_{close}" />. At L = {bannerWL} mm, plates whose <Latex math="M_{close}" /> exceeds the clinical moment (10,000 N·mm) are highlighted — the gap <em>never</em> closes, the bone <em>never</em> joins, and the plate bears 100% of the load (<Latex math="\sigma_{pre}" /> column). In this regime upsizing <strong>paradoxically increases</strong> plate stress compared to a smaller plate that successfully achieves load-sharing.
+                                            A larger steel plate raises <Latex math="K_{plate}" /> → raises <Latex math="M_{close}" />. At L = {bannerWL} mm, plates whose <Latex math="M_{close}" /> exceeds the clinical moment (10,000 N·mm) are highlighted — the gap <em>never</em> closes, the bone <em>never</em> joins, and the plate bears 100% of the load (<Latex math="\sigma_{pre}" /> column). In this regime upsizing <strong>paradoxically increases</strong> plate stress compared to a smaller plate that successfully achieves load-sharing.
                                         </p>
                                         <button onClick={() => setOpenMath(o => !o)} className="mt-3 text-[10px] font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1 hover:underline">
                                             {openMath ? '▲ Hide math' : '▼ See full derivation'}
@@ -2301,8 +2338,8 @@ if (typeof window !== 'undefined') {
                                                 {plateRows.map((r, i) => (
                                                     <div key={i} className={i > 0 ? 'border-t border-slate-100 dark:border-slate-700 pt-1 mt-1' : ''}>
                                                         <div className="font-bold">{r.name}:</div>
-                                                        <div><Latex math={`K_{plate} = \\dfrac{${CM_E_Ti.toLocaleString()} \\times ${r.I_p}}{${bannerWL}} = ${Math.round(cm_kp(CM_E_Ti, r.I_p, bannerWL)).toLocaleString()}\\,\\mathrm{N{\\cdot}mm/rad}`} /></div>
-                                                        <div><Latex math={`M_{close} = \\dfrac{${Math.round(cm_kp(CM_E_Ti, r.I_p, bannerWL)).toLocaleString()} \\cdot 1}{${CM_Dbone}} = ${Math.round(r.mc).toLocaleString()}\\,\\mathrm{N{\\cdot}mm}`} /></div>
+                                                        <div><Latex math={`K_{plate} = \\dfrac{${CM_E_St.toLocaleString()} \\times ${r.I_p}}{${bannerWL}} = ${Math.round(cm_kp(CM_E_St, r.I_p, bannerWL)).toLocaleString()}\\,\\mathrm{N{\\cdot}mm/rad}`} /></div>
+                                                        <div><Latex math={`M_{close} = \\dfrac{${Math.round(cm_kp(CM_E_St, r.I_p, bannerWL)).toLocaleString()} \\cdot 1}{${CM_Dbone}} = ${Math.round(r.mc).toLocaleString()}\\,\\mathrm{N{\\cdot}mm}`} /></div>
                                                         <div><Latex math={`\\sigma_{pre} = \\dfrac{10{,}000 \\cdot ${r.y}}{${r.I_p}} = ${Math.round(r.s_pre)}\\,\\mathrm{MPa}`} /> (plate alone)</div>
                                                         {r.mc < CM_M
                                                             ? <div className="text-emerald-600 dark:text-emerald-400">Gap closes (M_close &lt; 10,000). <Latex math={`\\sigma_{post} = ${Math.round(r.s_post)}\\,\\mathrm{MPa}`} /> ✓</div>
@@ -2340,8 +2377,11 @@ if (typeof window !== 'undefined') {
                             return (
                                 <div className="mt-2">
                                     <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
-                                        <strong>M_close vs Working Length</strong> — the graph shows how the gap-closure moment falls as L increases. The horizontal dashed line marks the reference clinical moment (10,000 N·mm). Where a curve crosses that line is the <em>minimum L</em> needed for load-sharing to occur. Use the global banner to see the current L marker.
+                                        <strong><Latex math="M_{close}" /> vs Working Length</strong> — the graph shows how the gap-closure moment falls as <Latex math="L" /> increases. The horizontal dashed line marks the reference clinical moment (10,000 N·mm). Where a curve crosses that line is the <em>minimum L</em> needed for load-sharing to occur. Drag the amber handle (or use the banner above) to move the current <Latex math="L" /> marker.
                                     </p>
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-[10px] text-slate-600 dark:text-slate-400 mb-2">
+                                        <strong className="text-slate-700 dark:text-slate-200">Curve legend:</strong> The three curves use a single representative <strong>"standard" plate cross-section</strong> with <Latex math={'I_p = 25\\,\\mathrm{mm}^4'} /> — a generic mid-range geometry that sits between the Vi 2.7 mm DCP (<Latex math={'I_p \\approx 10.4'} />) and the Vi 3.5 mm Narrow DCP (<Latex math={'I_p \\approx 28.7'} />). It is <em>not</em> a specific Vi catalogue plate. The <strong>"Ti large"</strong> curve uses the <strong>Vi 3.5 mm Broad DCP</strong> (12 × 4.2 mm, <Latex math={'I_p = 74.09\\,\\mathrm{mm}^4'} />) so that material (<Latex math="E" />) and geometry (<Latex math="I_p" />) are isolated as independent variables: Ti std vs Steel std isolates material; Ti std vs Ti large isolates geometry.
+                                    </div>
                                     <svg viewBox="0 0 500 290" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
                                         {/* Axes */}
                                         <line x1="50" y1="50" x2="50" y2="250" className="stroke-slate-300 dark:stroke-slate-700 stroke-2" />
@@ -2417,10 +2457,126 @@ if (typeof window !== 'undefined') {
                             );
                         })()}
 
+                        {/* σ_post vs Working Length — companion graph */}
+                        {(() => {
+                            const minL = 2; const maxL = 100;
+                            const I_std = 25; const y_std = 1.5;
+                            const I_large = cm_plates[2].I_p; const y_large = cm_plates[2].y;
+                            // Compute post-closure stress curves; cap at pure-plate stress when M < M_close
+                            const sigPost = (E, I_p, y, L) => {
+                                const Mc = cm_mclose(E, I_p, L);
+                                if (Mc >= CM_M) return CM_M * y / I_p; // gap doesn't close: plate alone
+                                return cm_stress(E, I_p, y, L);
+                            };
+                            const pts = (E, I_p, y) => {
+                                const arr = [];
+                                for (let L = minL; L <= maxL; L += 2) {
+                                    arr.push({ L, s: sigPost(E, I_p, y, L) });
+                                }
+                                return arr;
+                            };
+                            const ptsTi  = pts(CM_E_Ti, I_std,   y_std);
+                            const ptsSt  = pts(CM_E_St, I_std,   y_std);
+                            const ptsLg  = pts(CM_E_Ti, I_large, y_large);
+                            const allS = [...ptsTi, ...ptsSt, ...ptsLg].map(p => p.s);
+                            const sMax = Math.max(...allS);
+                            const sCap = Math.min(sMax, 1500); // hard cap so pre-closure plate-alone spikes don't dominate
+                            const mapX = (L) => 50 + ((L - minL) / (maxL - minL)) * 400;
+                            const mapY = (s) => 250 - (Math.min(s, sCap) / sCap) * 200;
+                            const pathFor = (arr) => arr.map(p => `${mapX(p.L)},${mapY(p.s)}`).join(' L ');
+                            // Critical L for each curve (where sigma transitions from plate-alone to load-sharing)
+                            const lcrit = (E, I_p) => (E * I_p * CM_gap) / (CM_M * CM_Dbone);
+                            const lTi = lcrit(CM_E_Ti, I_std);
+                            const lSt = lcrit(CM_E_St, I_std);
+                            const lLg = lcrit(CM_E_Ti, I_large);
+                            // Current σ_post values at bannerWL
+                            const sNowTi = sigPost(CM_E_Ti, I_std,   y_std,   bannerWL);
+                            const sNowSt = sigPost(CM_E_St, I_std,   y_std,   bannerWL);
+                            const sNowLg = sigPost(CM_E_Ti, I_large, y_large, bannerWL);
+                            return (
+                                <div className="mt-4">
+                                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                                        <strong>Post-closure plate stress (<Latex math="\sigma_{post}" />) vs Working Length</strong> — companion graph showing the implant stress that actually matters for fatigue. To the <em>left</em> of each curve's critical <Latex math="L" /> the gap doesn't close at the clinical moment, so the plate carries the entire load (flat plateau at <Latex math={'\\sigma_{pre} = M y / I_p'} />). To the <em>right</em>, load-sharing begins and stress drops as <Latex math="L" /> grows. Drag the amber handle (or use the banner above) to inspect a given <Latex math="L" />.
+                                    </p>
+                                    <svg viewBox="0 0 500 290" className="w-full h-auto font-sans bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner overflow-visible">
+                                        {/* Axes */}
+                                        <line x1="50" y1="50" x2="50" y2="250" className="stroke-slate-300 dark:stroke-slate-700 stroke-2" />
+                                        <line x1="50" y1="250" x2="450" y2="250" className="stroke-slate-400 stroke-2" />
+                                        <text x="250" y="268" className="fill-slate-500 text-[8px] font-bold" textAnchor="middle">Working Length, L (mm)</text>
+                                        <text x="18" y="150" className="fill-rose-600 dark:fill-rose-400 text-[8px] font-bold uppercase tracking-widest" transform="rotate(-90 18 150)" textAnchor="middle">σ_post (MPa)</text>
+                                        {/* Y labels */}
+                                        <text x="45" y="53"  className="fill-slate-400 text-[8px] font-mono" textAnchor="end">{Math.round(sCap)}</text>
+                                        <text x="45" y="153" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">{Math.round(sCap/2)}</text>
+                                        <text x="45" y="253" className="fill-slate-400 text-[8px] font-mono" textAnchor="end">0</text>
+                                        {/* X labels */}
+                                        <text x="50"  y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">2</text>
+                                        <text x="170" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">30</text>
+                                        <text x="250" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">50</text>
+                                        <text x="450" y="264" className="fill-slate-400 text-[7px]" textAnchor="middle">100</text>
+                                        {/* Curves */}
+                                        <path d={`M ${pathFor(ptsTi)}`} fill="none" className="stroke-emerald-500 stroke-[2.5px]" />
+                                        <path d={`M ${pathFor(ptsSt)}`} fill="none" className="stroke-rose-500 stroke-[2.5px]" />
+                                        <path d={`M ${pathFor(ptsLg)}`} fill="none" className="stroke-blue-500 stroke-[2.5px]" />
+                                        {/* Critical L markers (where load-sharing starts) */}
+                                        {lTi >= minL && lTi <= maxL && <line x1={mapX(lTi)} y1="245" x2={mapX(lTi)} y2="255" className="stroke-emerald-500 stroke-2" />}
+                                        {lSt >= minL && lSt <= maxL && <line x1={mapX(lSt)} y1="245" x2={mapX(lSt)} y2="255" className="stroke-rose-500 stroke-2" />}
+                                        {lLg >= minL && lLg <= maxL && <line x1={mapX(lLg)} y1="245" x2={mapX(lLg)} y2="255" className="stroke-blue-500 stroke-2" />}
+                                        {/* Current L marker */}
+                                        <line x1={mapX(bannerWL)} y1="50" x2={mapX(bannerWL)} y2="250" strokeDasharray="4 2" className="stroke-amber-400 dark:stroke-amber-500 stroke-[2px] opacity-80" />
+                                        <g transform={`translate(${mapX(bannerWL)}, 0)`} className="pointer-events-none">
+                                            <rect x="-20" y="50" width="40" height="15" rx="3" className="fill-amber-100 dark:fill-amber-900/80" />
+                                            <text x="0" y="61" className="fill-amber-800 dark:fill-amber-200 text-[7px] font-bold" textAnchor="middle">L={bannerWL}</text>
+                                        </g>
+                                        {/* Draggable handle */}
+                                        <circle cx={mapX(bannerWL)} cy="50" r="6" className="fill-amber-400 stroke-white stroke-2 cursor-ew-resize pointer-events-none" />
+                                        {/* Legend with live σ values */}
+                                        <g transform="translate(260, 58)">
+                                            <rect x="0" y="0" width="190" height="56" rx="3" className="fill-white/90 dark:fill-slate-800/90" />
+                                            <line x1="6" y1="12" x2="20" y2="12" className="stroke-emerald-500 stroke-2" />
+                                            <text x="24" y="15" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti std (I_p=25): σ = {Math.round(sNowTi)} MPa</text>
+                                            <line x1="6" y1="28" x2="20" y2="28" className="stroke-rose-500 stroke-2" />
+                                            <text x="24" y="31" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Steel std (I_p=25): σ = {Math.round(sNowSt)} MPa</text>
+                                            <line x1="6" y1="44" x2="20" y2="44" className="stroke-blue-500 stroke-2" />
+                                            <text x="24" y="47" className="fill-slate-700 dark:fill-slate-300 text-[8px]">Ti large (I_p=74): σ = {Math.round(sNowLg)} MPa</text>
+                                        </g>
+                                        {/* Invisible drag rect for interaction */}
+                                        <rect
+                                            x="50" y="50" width="400" height="200"
+                                            fill="transparent"
+                                            className="cursor-ew-resize"
+                                            onPointerDown={(e) => {
+                                                e.currentTarget.setPointerCapture(e.pointerId);
+                                                const r = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+                                                const scale = 500 / r.width;
+                                                let svgX = (e.clientX - r.left) * scale;
+                                                if (svgX < 50) svgX = 50; if (svgX > 450) svgX = 450;
+                                                const L = Math.round(minL + ((svgX - 50) / 400) * (maxL - minL));
+                                                setBannerWL(L);
+                                            }}
+                                            onPointerMove={(e) => {
+                                                if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+                                                const r = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+                                                const scale = 500 / r.width;
+                                                let svgX = (e.clientX - r.left) * scale;
+                                                if (svgX < 50) svgX = 50; if (svgX > 450) svgX = 450;
+                                                const L = Math.round(minL + ((svgX - 50) / 400) * (maxL - minL));
+                                                setBannerWL(L);
+                                            }}
+                                            onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+                                            onPointerCancel={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+                                        />
+                                    </svg>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mt-2">
+                                        Tick marks on the x-axis at the foot of each curve indicate the critical <Latex math="L" /> at which that construct first achieves gap closure under M = 10,000 N·mm. To the left of that tick the curve is flat at the plate-alone stress; to the right it falls along the load-sharing curve.
+                                    </p>
+                                </div>
+                            );
+                        })()}
+
                         <div className="bg-amber-100 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-300 dark:border-amber-700/50">
                             <strong className="text-amber-900 dark:text-amber-200 text-sm block mb-1">Clinical Implication</strong>
                             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                                Whether upsizing raises or lowers plate stress in a realistic gap scenario depends entirely on where the clinical moment falls relative to M_close for each construct. Use the global banner to test: as you decrease L, watch M_close rise — eventually exceeding the clinical moment for the large plate, triggering the paradox. Increasing working length or switching to titanium unambiguously lower M_close and therefore guarantee earlier load-sharing under the same clinical load.
+                                Whether upsizing raises or lowers plate stress in a realistic gap scenario depends entirely on where the clinical moment falls relative to <Latex math="M_{close}" /> for each construct. Use the banner above (or drag either graph) to test: as you decrease <Latex math="L" />, watch <Latex math="M_{close}" /> rise — eventually exceeding the clinical moment for the large plate, triggering the paradox. Increasing working length or switching to titanium unambiguously lowers <Latex math="M_{close}" /> and therefore guarantees earlier load-sharing under the same clinical load.
                             </p>
                         </div>
                     </div>
