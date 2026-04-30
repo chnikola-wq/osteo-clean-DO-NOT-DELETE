@@ -2979,40 +2979,40 @@ if (typeof window !== 'undefined') {
                                             </>
                                         )}
                                     </div>
+
+                                    {/* ── Deep clinical narrative (inside IIFE so s1/s2/s3 are in scope) ── */}
+                                    <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">What This Means in the Operating Theatre</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+                                                <p className="font-semibold text-slate-700 dark:text-slate-300">Why the intermediate curve and the post-closure gap produce the same stress</p>
+                                                <p className="leading-relaxed">
+                                                    This is not a coincidence — it is a mathematical consequence of the spring model. In both cases, the only load path from one bone fragment to the other is through the fracture-interface contact spring (K<sub>bone</sub> ≈ 50,000 N·mm/rad). Whether that contact is due to direct reduction (no gap) or gap closure under bending load, the mechanics are identical once contact is established: <Latex math="\sigma = M \cdot \tfrac{K_{plate}}{K_{plate}+K_{bone}} \cdot \tfrac{y}{I_p}" />. The formula contains no information about whether a gap existed before bending — only about whether contact exists now.
+                                                </p>
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+                                                <p className="font-semibold text-slate-700 dark:text-slate-300">The pre-closure phase: a high-stakes transient</p>
+                                                <p className="leading-relaxed">
+                                                    Before the gap closes, the plate carries the entire moment alone. As shown in Section 9, the gap closes at M<sub>close</sub> = EI<sub>p</sub>·gap / (L·D<sub>bone</sub>). At short working lengths, M<sub>close</sub> is high — the gap is hard to close — so the plate spends more of each loading cycle in the dangerous pre-closure regime (<strong>{s3.toFixed(0)} MPa</strong>). At long working lengths, M<sub>close</sub> is low — the gap closes easily at low loads — so the plate quickly transitions to the safer intermediate regime. This is the <em>only</em> beneficial effect of working length in a gap model.
+                                                </p>
+                                            </div>
+                                            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+                                                <p className="font-semibold text-amber-800 dark:text-amber-300">When compression truly matters: the regime boundary</p>
+                                                <p className="leading-relaxed">
+                                                    Compressive reduction moves the construct from the intermediate curve down to the minimum floor — a drop of <strong>~{(s2-s1).toFixed(0)} MPa at L = {bannerWL} mm</strong>. This is maintained for every cycle of physiological loading in which M stays below M<sub>composite</sub>. For a typical canine long-bone repair, M<sub>composite</sub> depends on the screw torque and the quality of cortical contact. The key clinical insight is that the minimum floor is entirely independent of working length: <strong>you cannot achieve composite-beam protection by extending the plate span — only by achieving and maintaining compressive cortical contact.</strong>
+                                                </p>
+                                            </div>
+                                            <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 text-xs text-slate-600 dark:text-slate-400 space-y-2">
+                                                <p className="font-semibold text-indigo-700 dark:text-indigo-400">Practical implications for plate selection and post-op protocol</p>
+                                                <p className="leading-relaxed">
+                                                    The graph reveals three distinct surgical goals: <strong>(1)</strong> If compression is achieved and maintained below M<sub>composite</sub>, any working length is acceptable — the minimum floor governs. <strong>(2)</strong> If compression cannot be guaranteed (bridging fractures, comminution, gap persistence), the intermediate curve governs — a longer working length reduces stress and is beneficial. <strong>(3)</strong> If a gap exists and the patient is allowed to load before the gap closes, the maximum pre-closure line is the operative stress — working length offers no protection at all during this phase. Post-operative loading restriction protocols should therefore be designed around which regime the construct is in, not simply around fracture type.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             );
                         })()}
-
-                        {/* ── Deep clinical narrative ── */}
-                        <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">What This Means in the Operating Theatre</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-                                    <p className="font-semibold text-slate-700 dark:text-slate-300">Why the intermediate curve and the post-closure gap produce the same stress</p>
-                                    <p className="leading-relaxed">
-                                        This is not a coincidence — it is a mathematical consequence of the spring model. In both cases, the only load path from one bone fragment to the other is through the fracture-interface contact spring (K<sub>bone</sub> ≈ 50,000 N·mm/rad). Whether that contact is due to direct reduction (no gap) or gap closure under bending load, the mechanics are identical once contact is established: <Latex math="\sigma = M \cdot \tfrac{K_{plate}}{K_{plate}+K_{bone}} \cdot \tfrac{y}{I_p}" />. The formula contains no information about whether a gap existed before bending — only about whether contact exists now.
-                                    </p>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-                                    <p className="font-semibold text-slate-700 dark:text-slate-300">The pre-closure phase: a high-stakes transient</p>
-                                    <p className="leading-relaxed">
-                                        Before the gap closes, the plate carries the entire moment alone. As shown in Section 9, the gap closes at M<sub>close</sub> = EI<sub>p</sub>·gap / (L·D<sub>bone</sub>). At short working lengths, M<sub>close</sub> is high — the gap is hard to close — so the plate spends more of each loading cycle in the dangerous pre-closure regime (<strong>{s3.toFixed(0)} MPa</strong>). At long working lengths, M<sub>close</sub> is low — the gap closes easily at low loads — so the plate quickly transitions to the safer intermediate regime. This is the <em>only</em> beneficial effect of working length in a gap model.
-                                    </p>
-                                </div>
-                                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-                                    <p className="font-semibold text-amber-800 dark:text-amber-300">When compression truly matters: the regime boundary</p>
-                                    <p className="leading-relaxed">
-                                        Compressive reduction moves the construct from the intermediate curve down to the minimum floor — a drop of <strong>~{(s2-s1).toFixed(0)} MPa at L = {bannerWL} mm</strong>. This is maintained for every cycle of physiological loading in which M stays below M<sub>composite</sub>. For a typical canine long-bone repair, M<sub>composite</sub> depends on the screw torque and the quality of cortical contact. The key clinical insight is that the minimum floor is entirely independent of working length: <strong>you cannot achieve composite-beam protection by extending the plate span — only by achieving and maintaining compressive cortical contact.</strong>
-                                    </p>
-                                </div>
-                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 text-xs text-slate-600 dark:text-slate-400 space-y-2">
-                                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">Practical implications for plate selection and post-op protocol</p>
-                                    <p className="leading-relaxed">
-                                        The graph reveals three distinct surgical goals: <strong>(1)</strong> If compression is achieved and maintained below M<sub>composite</sub>, any working length is acceptable — the minimum floor governs. <strong>(2)</strong> If compression cannot be guaranteed (bridging fractures, comminution, gap persistence), the intermediate curve governs — a longer working length reduces stress and is beneficial. <strong>(3)</strong> If a gap exists and the patient is allowed to load before the gap closes, the maximum pre-closure line is the operative stress — working length offers no protection at all during this phase. Post-operative loading restriction protocols should therefore be designed around which regime the construct is in, not simply around fracture type.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
